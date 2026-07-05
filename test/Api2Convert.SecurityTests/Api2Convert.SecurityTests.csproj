@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The INDEPENDENT security suite. It is a separate project so it can be run in isolation
+    (`dotnet test test/Api2Convert.SecurityTests`) and is black-box: it references only the
+    public Api2Convert surface, never internals. The redirect guarantees are proven with REAL
+    loopback HTTP servers (System.Net.HttpListener) — only a genuine cross-host 302 can show
+    that a secret-bearing request is not forwarded to the redirect target.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>Api2Convert.SecurityTests</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+    <PackageReference Include="JunitXml.TestLogger" Version="4.1.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/Api2Convert/Api2Convert.csproj" />
+  </ItemGroup>
+
+</Project>

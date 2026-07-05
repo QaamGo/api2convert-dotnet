@@ -1,0 +1,34 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: Publish to NuGet
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Restore & build
+        run: |
+          dotnet restore Api2Convert.sln
+          dotnet build Api2Convert.sln -c Release --no-restore
+      # The guardrail runs before we ever publish an artifact.
+      - name: Test (unit + security)
+        run: |
+          dotnet test test/Api2Convert.Tests -c Release --no-build
+          dotnet test test/Api2Convert.SecurityTests -c Release --no-build
+      - name: Pack
+        run: dotnet pack src/Api2Convert/Api2Convert.csproj -c Release --no-build -o artifacts
+      # Credentials come from a masked repository secret — never committed.
+      - name: Push to NuGet
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+        run: dotnet nuget push "artifacts/*.nupkg" --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json --skip-duplicate

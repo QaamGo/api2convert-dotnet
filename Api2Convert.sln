@@ -1,0 +1,50 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{F9C429FA-FCEB-4562-8958-CC7F564A6A25}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Api2Convert", "src\Api2Convert\Api2Convert.csproj", "{30FBB841-96F3-4DEF-8589-E48C4DB4C049}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{9A427F8D-BCC8-40A5-A8E8-9867510CEBCC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Api2Convert.Tests", "test\Api2Convert.Tests\Api2Convert.Tests.csproj", "{FEEFA29A-33D3-469A-A7EA-5D24C16462FE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Api2Convert.SecurityTests", "test\Api2Convert.SecurityTests\Api2Convert.SecurityTests.csproj", "{89A60F55-B7CE-4285-9221-E1BCC31C0541}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Api2Convert.LiveTests", "test\Api2Convert.LiveTests\Api2Convert.LiveTests.csproj", "{B6F16323-2359-4043-8D71-E26B826870A3}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{30FBB841-96F3-4DEF-8589-E48C4DB4C049}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{30FBB841-96F3-4DEF-8589-E48C4DB4C049}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{30FBB841-96F3-4DEF-8589-E48C4DB4C049}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{30FBB841-96F3-4DEF-8589-E48C4DB4C049}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FEEFA29A-33D3-469A-A7EA-5D24C16462FE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FEEFA29A-33D3-469A-A7EA-5D24C16462FE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FEEFA29A-33D3-469A-A7EA-5D24C16462FE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FEEFA29A-33D3-469A-A7EA-5D24C16462FE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{89A60F55-B7CE-4285-9221-E1BCC31C0541}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{89A60F55-B7CE-4285-9221-E1BCC31C0541}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{89A60F55-B7CE-4285-9221-E1BCC31C0541}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{89A60F55-B7CE-4285-9221-E1BCC31C0541}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B6F16323-2359-4043-8D71-E26B826870A3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B6F16323-2359-4043-8D71-E26B826870A3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B6F16323-2359-4043-8D71-E26B826870A3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B6F16323-2359-4043-8D71-E26B826870A3}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{30FBB841-96F3-4DEF-8589-E48C4DB4C049} = {F9C429FA-FCEB-4562-8958-CC7F564A6A25}
+		{FEEFA29A-33D3-469A-A7EA-5D24C16462FE} = {9A427F8D-BCC8-40A5-A8E8-9867510CEBCC}
+		{89A60F55-B7CE-4285-9221-E1BCC31C0541} = {9A427F8D-BCC8-40A5-A8E8-9867510CEBCC}
+		{B6F16323-2359-4043-8D71-E26B826870A3} = {9A427F8D-BCC8-40A5-A8E8-9867510CEBCC}
+	EndGlobalSection
+EndGlobal

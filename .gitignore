@@ -1,0 +1,27 @@
+# Build output
+bin/
+obj/
+*.user
+artifacts/
+*.nupkg
+*.snupkg
+
+# Test / coverage
+[Tt]est[Rr]esults/
+coverage/
+*.trx
+*.coverage
+*.cover+*
+
+# IDE
+.vs/
+.idea/
+*.suo
+.vscode/
+
+# OS
+.DS_Store
+
+# Local secrets — never commit
+.env
+*.env

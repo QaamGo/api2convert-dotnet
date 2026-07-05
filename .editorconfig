@@ -1,0 +1,29 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+
+[*.{cs,csproj,props,targets}]
+indent_size = 4
+
+[*.cs]
+# Namespaces & usings
+csharp_style_namespace_declarations = file_scoped:suggestion
+dotnet_sort_system_directives_first = true
+
+# Prefer modern language features
+csharp_style_var_for_built_in_types = false:suggestion
+csharp_prefer_braces = true:suggestion
+
+# CA1724 (type name conflicts with namespace) — the client is Api2ConvertClient by design.
+dotnet_diagnostic.CA1724.severity = none
+
+[*.{json,yml,yaml,md}]
+indent_size = 2
+
+[Makefile]
+indent_style = tab

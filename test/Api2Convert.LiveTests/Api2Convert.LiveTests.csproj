@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Live conformance against the real API. A separate project so it is never part of the
+    default offline run. Every test auto-skips unless API2CONVERT_API_KEY is set, so even
+    `dotnet test` on this project is safe without a key. To run it:
+
+      API2CONVERT_API_KEY=<behat default key> dotnet test test/Api2Convert.LiveTests
+  -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>Api2Convert.LiveTests</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/Api2Convert/Api2Convert.csproj" />
+  </ItemGroup>
+
+</Project>

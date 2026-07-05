@@ -1,0 +1,47 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>Api2Convert</RootNamespace>
+    <AssemblyName>Api2Convert</AssemblyName>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- Ship a doc file for IntelliSense, but don't fail the build on an undocumented member
+         (CS1591) or a partially-documented param list (CS1573) — the important surface is documented. -->
+    <NoWarn>$(NoWarn);CS1591;CS1573</NoWarn>
+
+    <!-- NuGet package metadata -->
+    <PackageId>Api2Convert</PackageId>
+    <Version>10.2.0</Version>
+    <Authors>Qaamgo Media GmbH</Authors>
+    <Company>Qaamgo Media GmbH</Company>
+    <Product>API2Convert .NET SDK</Product>
+    <Description>Official .NET SDK for the API2Convert file-conversion API. Convert, compress and transform images, documents, audio, video, ebooks, archives and CAD with one line of code.</Description>
+    <PackageProjectUrl>https://www.api2convert.com</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/QaamGo/api2convert-dotnet</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageTags>api2convert;file-conversion;convert;pdf;image;video;audio;ocr;sdk</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="../../README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <!-- The offline unit suite drives internal test seams (an instant sleeper and a
+       deterministic no-jitter RNG). The security suite stays black-box (public API only). -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="Api2Convert.Tests" />
+  </ItemGroup>
+
+  <!--
+    Zero third-party runtime dependencies: JSON via System.Text.Json, HTTP via the built-in
+    System.Net.Http.HttpClient, HMAC via System.Security.Cryptography — all in the base class
+    library. Keep it that way; do not add a runtime PackageReference here.
+  -->
+
+</Project>
