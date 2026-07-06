@@ -59,19 +59,44 @@ public sealed class FileDownload
             throw new Api2ConvertException($"Could not create directory: {dir}: {e.Message}", e);
         }
 
+        using HttpResponse response = await _transport
+            .DownloadAsync(_output.Uri, Headers(downloadPassword), cancellationToken).ConfigureAwait(false);
+
         try
         {
-            using HttpResponse response = await _transport
-                .DownloadAsync(_output.Uri, Headers(downloadPassword), cancellationToken).ConfigureAwait(false);
             using FileStream output = File.Create(target);
             await response.Body.CopyToAsync(output, cancellationToken).ConfigureAwait(false);
         }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        catch (Exception e)
         {
-            throw new Api2ConvertException($"Could not write file: {target}: {e.Message}", e);
+            // A failed or aborted write (a disk error, a mid-stream network failure, or cancellation)
+            // must not leave a partial/corrupt file on disk. Delete it best-effort before rethrowing.
+            TryDelete(target);
+            if (e is IOException or UnauthorizedAccessException)
+            {
+                throw new Api2ConvertException($"Could not write file: {target}: {e.Message}", e);
+            }
+
+            throw;
         }
 
         return target;
+    }
+
+    /// <summary>
+    /// Best-effort removal of a partial file left by a failed write. The write already failed, so a
+    /// leftover we cannot delete must not mask the original error.
+    /// </summary>
+    private static void TryDelete(string path)
+    {
+        try
+        {
+            File.Delete(path);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            // ignore: nothing more we can do, and the real failure is already being surfaced
+        }
     }
 
     /// <summary>

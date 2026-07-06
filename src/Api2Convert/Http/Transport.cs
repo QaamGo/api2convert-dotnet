@@ -162,6 +162,16 @@ public sealed class Transport
     {
         await EnsureSuccessfulAsync(response, cancellationToken).ConfigureAwait(false);
 
+        // Every API request rides the no-follow path (secrets travel in X-Oc-* headers), so a 3xx
+        // passes EnsureSuccessfulAsync (status < 400) but was deliberately not followed. Decoding its
+        // body would yield an empty model; surface it as a typed error instead — mirroring the
+        // DownloadAsync guard so an un-followed redirect is never silently swallowed.
+        if (response.Status is >= 300 and < 400)
+        {
+            throw new NetworkException(
+                $"API2Convert returned an unexpected redirect (HTTP {response.Status}); the request was not followed.");
+        }
+
         byte[] raw = await ReadBodyAsync(response, cancellationToken).ConfigureAwait(false);
         if (raw.Length == 0)
         {
@@ -250,6 +260,17 @@ public sealed class Transport
         try
         {
             await EnsureSuccessfulAsync(response, cancellationToken).ConfigureAwait(false);
+
+            // A 3xx passes EnsureSuccessfulAsync (status < 400), but on the no-follow path (a
+            // secret-bearing request) the redirect was deliberately not followed — the body is the
+            // redirect page, not the file. Surface it as a NetworkException so a silently-empty or
+            // corrupt file never lands on disk instead of the download.
+            if (response.Status is >= 300 and < 400)
+            {
+                throw new NetworkException(
+                    "The download did not resolve: a redirect was not followed because the request "
+                    + "carried a secret header.");
+            }
         }
         catch
         {

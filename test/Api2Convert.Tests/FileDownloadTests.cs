@@ -1,6 +1,10 @@
+using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
+using Api2Convert.Exceptions;
 using Api2Convert.Models;
 using Xunit;
 
@@ -8,6 +12,31 @@ namespace Api2Convert.Tests;
 
 public sealed class FileDownloadTests : A2CTestBase
 {
+    [Fact]
+    public async Task AFailedMidWriteLeavesNoPartialFileOnDisk()
+    {
+        // The body yields a few bytes, then the read throws — a mid-stream network/disk failure. The
+        // save must delete whatever was already written rather than leave a truncated/corrupt file.
+        Http.AddRawStream(200, new FailingReadStream(Encoding.UTF8.GetBytes("PARTIAL")));
+        string path = Path.Combine(Path.GetTempPath(), "a2c-" + Path.GetRandomFileName() + ".bin");
+
+        await Assert.ThrowsAsync<Api2ConvertException>(() =>
+            Client().Download(OutputFile.Of("o", "https://dl/x", "f.bin")).SaveAsync(path));
+
+        Assert.False(File.Exists(path), "a failed mid-write download must not leave a partial file behind");
+    }
+
+    [Fact]
+    public async Task ASecretBearingDownloadThatRedirectsThrowsInsteadOfSavingTheRedirectBody()
+    {
+        // A password makes this the no-follow path; a 3xx passes the < 400 success check, so without a
+        // guard the redirect page would be saved as the file. It must surface as a NetworkException.
+        Http.AddJson(302, "redirect body", new Dictionary<string, string> { ["Location"] = "https://evil/steal" });
+
+        await Assert.ThrowsAsync<NetworkException>(() =>
+            Client().Download(OutputFile.Of("o", "https://dl/x", "f.pdf"), "s3cret").ContentsAsync());
+    }
+
     [Fact]
     public async Task SavesToAnExplicitFilePath()
     {
@@ -84,5 +113,65 @@ public sealed class FileDownloadTests : A2CTestBase
 
         Assert.True(RequestAt(0).FollowRedirects);
         Assert.Equal("", RequestAt(0).Header("X-Oc-Download-Password"));
+    }
+
+    /// <summary>
+    /// A read-only stream that returns a fixed prefix once, then throws on the next read — simulating a
+    /// connection dropping partway through a download.
+    /// </summary>
+    private sealed class FailingReadStream : Stream
+    {
+        private readonly byte[] _prefix;
+        private int _position;
+
+        public FailingReadStream(byte[] prefix) => _prefix = prefix;
+
+        public override bool CanRead => true;
+
+        public override bool CanSeek => false;
+
+        public override bool CanWrite => false;
+
+        public override long Length => throw new NotSupportedException();
+
+        public override long Position
+        {
+            get => _position;
+            set => throw new NotSupportedException();
+        }
+
+        public override int Read(byte[] buffer, int offset, int count)
+        {
+            if (_position < _prefix.Length)
+            {
+                int n = Math.Min(count, _prefix.Length - _position);
+                Array.Copy(_prefix, _position, buffer, offset, n);
+                _position += n;
+                return n;
+            }
+
+            throw new IOException("simulated mid-stream network failure");
+        }
+
+        public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+        {
+            if (_position < _prefix.Length)
+            {
+                int n = Math.Min(buffer.Length, _prefix.Length - _position);
+                _prefix.AsSpan(_position, n).CopyTo(buffer.Span);
+                _position += n;
+                return ValueTask.FromResult(n);
+            }
+
+            throw new IOException("simulated mid-stream network failure");
+        }
+
+        public override void Flush() => throw new NotSupportedException();
+
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+
+        public override void SetLength(long value) => throw new NotSupportedException();
+
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
     }
 }

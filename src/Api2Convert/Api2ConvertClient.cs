@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Api2Convert.Exceptions;
 using Api2Convert.Http;
 using Api2Convert.Models;
 using Api2Convert.Resources;
@@ -170,10 +171,9 @@ public sealed class Api2ConvertClient : IDisposable
         string? key = !string.IsNullOrEmpty(apiKey) ? apiKey : Environment.GetEnvironmentVariable("API2CONVERT_API_KEY");
         if (string.IsNullOrEmpty(key))
         {
-            throw new ArgumentException(
+            throw new ConfigurationException(
                 "No API key provided. Pass it to the constructor or set the "
-                + "API2CONVERT_API_KEY environment variable.",
-                nameof(apiKey));
+                + "API2CONVERT_API_KEY environment variable.");
         }
 
         return key;

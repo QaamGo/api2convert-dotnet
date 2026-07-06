@@ -77,7 +77,9 @@ public sealed class SecurityTests
         using var api = LoopbackServer.RedirectingTo(evil.BaseUrl + "/steal");
         using var client = new Api2ConvertClient("secret-key", NoRetry(api.BaseUrl + "/v2"));
 
-        await client.Jobs.GetAsync("j"); // the un-followed 302 yields an empty body, not an error
+        // The 302 is not followed (so the key can't reach the redirect target) and is now surfaced
+        // as a typed error rather than silently decoding the redirect body into an empty model.
+        await Assert.ThrowsAsync<NetworkException>(() => client.Jobs.GetAsync("j"));
 
         Assert.Equal(0, evil.Hits); // the account key must never reach the redirect target
         Assert.Equal(1, api.Hits);
@@ -98,7 +100,10 @@ public sealed class SecurityTests
             ["status"] = new Dictionary<string, object?> { ["code"] = "incomplete" },
         });
 
-        await client.Jobs.UploadAsync(job, Encoding.UTF8.GetBytes("hello"));
+        // The upload sends X-Oc-Token (never the account key), does not follow the 302,
+        // and surfaces the un-followed redirect as a typed error rather than swallowing it.
+        await Assert.ThrowsAsync<NetworkException>(
+            () => client.Jobs.UploadAsync(job, Encoding.UTF8.GetBytes("hello")));
 
         Assert.True(uploadServer.Hits >= 1);
         Assert.Equal("tok-abc", uploadServer.HeadersReceived[0]["X-Oc-Token"]);
@@ -114,7 +119,10 @@ public sealed class SecurityTests
         using var client = new Api2ConvertClient("secret-key", NoRetry());
 
         var output = OutputFile.Of("o", storage.BaseUrl + "/f.pdf", null);
-        await client.Download(output, "s3cret").ContentsAsync();
+
+        // The un-followed 302 must not silently yield an empty "download" — it surfaces as a
+        // NetworkException so a corrupt/empty file never lands on disk.
+        await Assert.ThrowsAsync<NetworkException>(() => client.Download(output, "s3cret").ContentsAsync());
 
         Assert.Equal(0, evil.Hits); // the download password must never reach the redirect target
         // ...but it WAS sent to the intended storage host (the request was real).

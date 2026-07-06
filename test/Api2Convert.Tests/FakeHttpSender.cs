@@ -54,6 +54,16 @@ public sealed class FakeHttpSender : IHttpSender
         return this;
     }
 
+    /// <summary>
+    /// Queue a response whose body is an arbitrary (possibly failing) stream. Used to simulate a
+    /// mid-download read failure, which a materialized byte[] body cannot.
+    /// </summary>
+    public FakeHttpSender AddRawStream(int status, Stream body)
+    {
+        _queue.Enqueue(new CannedStream(status, new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase), body));
+        return this;
+    }
+
     public RecordedRequest At(int index) => Requests[index];
 
     public RecordedRequest Last() => Requests[^1];
@@ -96,11 +106,18 @@ public sealed class FakeHttpSender : IHttpSender
             throw exception;
         }
 
+        if (next is CannedStream cannedStream)
+        {
+            return new HttpResponse(cannedStream.Status, cannedStream.Headers, cannedStream.Body);
+        }
+
         var canned = (Canned)next;
         return new HttpResponse(canned.Status, canned.Headers, new MemoryStream(canned.Body));
     }
 
     private sealed record Canned(int Status, IReadOnlyDictionary<string, string> Headers, byte[] Body);
+
+    private sealed record CannedStream(int Status, IReadOnlyDictionary<string, string> Headers, Stream Body);
 
     /// <summary>A request the SDK sent, with convenient accessors.</summary>
     public sealed class RecordedRequest

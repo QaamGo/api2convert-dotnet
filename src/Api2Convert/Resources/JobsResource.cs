@@ -51,7 +51,7 @@ public sealed class JobsResource
 
     public async Task<Job> GetAsync(string jobId, CancellationToken cancellationToken = default)
     {
-        object? result = await _transport.RequestAsync("GET", "/jobs/" + jobId, cancellationToken: cancellationToken)
+        object? result = await _transport.RequestAsync("GET", "/jobs/" + UrlPath.Segment(jobId), cancellationToken: cancellationToken)
             .ConfigureAwait(false);
         return Job.FromDict(Data.Object(result));
     }
@@ -81,7 +81,7 @@ public sealed class JobsResource
         CancellationToken cancellationToken = default)
     {
         object? result = await _transport
-            .RequestAsync("PATCH", "/jobs/" + jobId, payload, cancellationToken: cancellationToken)
+            .RequestAsync("PATCH", "/jobs/" + UrlPath.Segment(jobId), payload, cancellationToken: cancellationToken)
             .ConfigureAwait(false);
         return Job.FromDict(Data.Object(result));
     }
@@ -92,7 +92,7 @@ public sealed class JobsResource
 
     /// <summary>Cancel a job (whether staged or processing).</summary>
     public Task CancelAsync(string jobId, CancellationToken cancellationToken = default) =>
-        _transport.RequestAsync("DELETE", "/jobs/" + jobId, cancellationToken: cancellationToken);
+        _transport.RequestAsync("DELETE", "/jobs/" + UrlPath.Segment(jobId), cancellationToken: cancellationToken);
 
     /// <summary>
     /// Attach an input by descriptor — e.g. a remote URL:
@@ -104,7 +104,7 @@ public sealed class JobsResource
         CancellationToken cancellationToken = default)
     {
         object? result = await _transport
-            .RequestAsync("POST", "/jobs/" + jobId + "/input", input, cancellationToken: cancellationToken)
+            .RequestAsync("POST", "/jobs/" + UrlPath.Segment(jobId) + "/input", input, cancellationToken: cancellationToken)
             .ConfigureAwait(false);
         return InputFile.FromDict(Data.Object(result));
     }
@@ -124,7 +124,7 @@ public sealed class JobsResource
     public async Task<IReadOnlyList<OutputFile>> OutputsAsync(string jobId, CancellationToken cancellationToken = default)
     {
         object? result = await _transport
-            .RequestAsync("GET", "/jobs/" + jobId + "/output", cancellationToken: cancellationToken)
+            .RequestAsync("GET", "/jobs/" + UrlPath.Segment(jobId) + "/output", cancellationToken: cancellationToken)
             .ConfigureAwait(false);
         return Data.MapObjects(result, OutputFile.FromDict);
     }

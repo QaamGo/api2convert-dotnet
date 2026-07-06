@@ -52,7 +52,7 @@ public sealed class PresetsResource
 
     public async Task<Preset> GetAsync(string presetId, CancellationToken cancellationToken = default)
     {
-        object? result = await _transport.RequestAsync("GET", "/presets/" + presetId, cancellationToken: cancellationToken)
+        object? result = await _transport.RequestAsync("GET", "/presets/" + UrlPath.Segment(presetId), cancellationToken: cancellationToken)
             .ConfigureAwait(false);
         return Preset.FromDict(Data.Object(result));
     }
@@ -63,11 +63,11 @@ public sealed class PresetsResource
         CancellationToken cancellationToken = default)
     {
         object? result = await _transport
-            .RequestAsync("PATCH", "/presets/" + presetId, payload, cancellationToken: cancellationToken)
+            .RequestAsync("PATCH", "/presets/" + UrlPath.Segment(presetId), payload, cancellationToken: cancellationToken)
             .ConfigureAwait(false);
         return Preset.FromDict(Data.Object(result));
     }
 
     public Task DeleteAsync(string presetId, CancellationToken cancellationToken = default) =>
-        _transport.RequestAsync("DELETE", "/presets/" + presetId, cancellationToken: cancellationToken);
+        _transport.RequestAsync("DELETE", "/presets/" + UrlPath.Segment(presetId), cancellationToken: cancellationToken);
 }

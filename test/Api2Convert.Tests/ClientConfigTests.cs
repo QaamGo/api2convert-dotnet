@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Api2Convert.Exceptions;
 using Api2Convert.Http;
 using Xunit;
 
@@ -14,7 +15,10 @@ public sealed class ClientConfigTests : A2CTestBase
         Environment.SetEnvironmentVariable("API2CONVERT_API_KEY", null);
         try
         {
-            Assert.Throws<ArgumentException>(() => new Api2ConvertClient(""));
+            // A missing key is an SDK configuration error, not a generic framework ArgumentException:
+            // it derives from Api2ConvertException so a single catch handles every SDK failure.
+            ConfigurationException ex = Assert.Throws<ConfigurationException>(() => new Api2ConvertClient(""));
+            Assert.IsAssignableFrom<Api2ConvertException>(ex);
         }
         finally
         {
