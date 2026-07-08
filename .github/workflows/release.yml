@@ -3,6 +3,9 @@ name: Release
 on:
   push:
     tags: ['v*']
+  # Manual run = connection test: exercises the full release flow through the OIDC login
+  # (proving the nuget.org Trusted Publishing policy matches) but SKIPS the push. Never publishes.
+  workflow_dispatch: {}
 
 permissions:
   contents: read
@@ -38,5 +41,23 @@ jobs:
         uses: NuGet/login@v1
         with:
           user: ${{ secrets.NUGET_USER }} # nuget.org profile username (not an email)
+      # Fail loudly if the policy didn't match (a failed exchange yields no key). Prints only the
+      # key length — never the key itself.
+      - name: Verify NuGet connection
+        env:
+          NUGET_KEY: ${{ steps.nuget-login.outputs.NUGET_API_KEY }}
+        run: |
+          if [ -n "$NUGET_KEY" ]; then
+            echo "✅ Trusted Publishing OK — nuget.org issued a temporary API key (${#NUGET_KEY} chars)."
+          else
+            echo "::error::No temporary key returned — check the nuget.org Trusted Publishing policy (owner / repo / workflow file release.yml / empty environment)."
+            exit 1
+          fi
+      # Publish only on a real version tag. A manual (workflow_dispatch) run stops here: the
+      # connection is proven without publishing anything.
       - name: Push to NuGet
+        if: github.event_name == 'push'
         run: dotnet nuget push "artifacts/*.nupkg" --api-key "${{ steps.nuget-login.outputs.NUGET_API_KEY }}" --source https://api.nuget.org/v3/index.json --skip-duplicate
+      - name: Connection test — publish skipped
+        if: github.event_name != 'push'
+        run: echo "ℹ️ Manual connection test — OIDC/trusted-publishing verified, publish intentionally skipped. Push a v* tag to publish."
