@@ -184,20 +184,48 @@ make docker-check
 ```
 
 The [live conformance suite](test/Api2Convert.LiveTests/ConversionConformanceTests.cs) doubles as an
-executable, end-to-end tour of the SDK — each test is a self-contained usage example:
-
-1. **Convert a remote URL** — the one-call happy path.
-2. **Upload and convert a local file** — the multipart upload path.
-3. **Convert with options** — apply target-specific conversion options.
-4. **Discover the catalog** — list conversions and option schemas.
-5. **Drive the job lifecycle by hand** — create → add input → start → wait → inspect.
-6. **Handle a validation error** — an unknown target is a typed error.
-7. **Handle an authentication error** — a bad key is typed and never leaked.
+executable, end-to-end tour of the SDK — there is one test per documented guide (plus two negative
+tests), each a self-contained usage example that mirrors the runnable file of the same name in
+[`examples/`](examples/).
 
 It runs automatically against the real API on every release tag (see
 [`.github/workflows/live-conformance.yml`](.github/workflows/live-conformance.yml)), so a published
-version is always verified end to end. Runnable single-purpose examples live in
-[`examples/`](examples/).
+version is always verified end to end.
+
+## Examples
+
+Every documented guide has a runnable, self-contained example in
+[`examples/Examples`](examples/Examples). They live in one console project; pass the guide slug to run
+one (the key is read from `API2CONVERT_API_KEY`, and `API2CONVERT_BASE_URL` retargets the host):
+
+```sh
+API2CONVERT_API_KEY=your-key dotnet run --project examples/Examples -- quickstart
+```
+
+Run it with no argument to list every guide.
+
+| Guide | File |
+|-------|------|
+| Quickstart — convert a remote JPG to PNG, then download | [`Quickstart.cs`](examples/Examples/Quickstart.cs) |
+| Convert Files — browse the catalog, then convert | [`ConvertFiles.cs`](examples/Examples/ConvertFiles.cs) |
+| Uploading Files — one-call upload + convert of a local file | [`UploadingFiles.cs`](examples/Examples/UploadingFiles.cs) |
+| Job Lifecycle — create → add input → start → wait → outputs | [`JobLifecycle.cs`](examples/Examples/JobLifecycle.cs) |
+| Add a Watermark — stamp a PNG onto a PDF | [`AddWatermark.cs`](examples/Examples/AddWatermark.cs) |
+| Create Thumbnails — first PDF page → PNG thumbnail | [`CreateThumbnails.cs`](examples/Examples/CreateThumbnails.cs) |
+| Compress Files — shrink a JPG | [`CompressFiles.cs`](examples/Examples/CompressFiles.cs) |
+| Create Archives — bundle two files into a ZIP | [`CreateArchives.cs`](examples/Examples/CreateArchives.cs) |
+| Create Hashes — SHA-256 of a ZIP | [`CreateHashes.cs`](examples/Examples/CreateHashes.cs) |
+| Extract Assets — pull assets out of a DOCX | [`ExtractAssets.cs`](examples/Examples/ExtractAssets.cs) |
+| File Analysis — read a JPG's metadata as JSON | [`FileAnalysis.cs`](examples/Examples/FileAnalysis.cs) |
+| Compare Files — SSIM diff of two images | [`CompareFiles.cs`](examples/Examples/CompareFiles.cs) |
+| Capture a Website — screenshot a URL to PNG | [`CaptureWebsite.cs`](examples/Examples/CaptureWebsite.cs) |
+| Audio Operations — re-encode WAV → AAC | [`AudioOperations.cs`](examples/Examples/AudioOperations.cs) |
+| Image Operations — resize a JPG | [`ImageOperations.cs`](examples/Examples/ImageOperations.cs) |
+| Webhooks — async convert with a callback, and verify a delivery | [`Webhooks.cs`](examples/Examples/Webhooks.cs) |
+| Presets — list saved presets | [`Presets.cs`](examples/Examples/Presets.cs) |
+| Statistics — usage stats for a month | [`Statistics.cs`](examples/Examples/Statistics.cs) |
+| Rate Limits — read contract information | [`RateLimits.cs`](examples/Examples/RateLimits.cs) |
+| Authentication — list jobs to confirm the key works | [`Authentication.cs`](examples/Examples/Authentication.cs) |
 
 ## License
 

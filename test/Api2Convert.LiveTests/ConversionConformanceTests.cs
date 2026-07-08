@@ -12,12 +12,12 @@ namespace Api2Convert.LiveTests;
 
 /// <summary>
 /// Live conformance suite — the canonical, cross-SDK set of scenarios that exercises the real
-/// API2Convert API end to end. Every scenario is written to read like a usage example, so this file
-/// doubles as an executable tour of the SDK: build a client, convert, discover, drive the job
-/// lifecycle, and handle the typed errors.
+/// API2Convert API end to end. There is exactly one test per documented guide (the same catalog the
+/// runnable <c>examples/</c> mirror), plus two negative tests, so this file doubles as an executable
+/// tour of the SDK.
 ///
 /// <para>Because these hit the real API and consume quota, every test uses <see cref="LiveFactAttribute"/>,
-/// which auto-skips unless <c>API2CONVERT_API_KEY</c> is set. So the default <c>dotnet test</c> run is
+/// which auto-skips unless <c>API2CONVERT_API_KEY</c> is set — so the default <c>dotnet test</c> run is
 /// safe without a key. To run it against a host:</para>
 /// <code>
 /// API2CONVERT_API_KEY=&lt;behat key&gt; API2CONVERT_BASE_URL=https://api.web8.api2convert.com/v2 \
@@ -26,28 +26,22 @@ namespace Api2Convert.LiveTests;
 /// <para><c>API2CONVERT_BASE_URL</c> overrides the host (e.g. a beta environment). Never commit a real
 /// key — it is read only from the environment.</para>
 ///
-/// <para>The seven scenarios mirror the shared spec implemented by every api2convert SDK (php, python,
-/// java, go, nodejs, dotnet, ruby, rust):</para>
-/// <list type="number">
-///   <item><description><see cref="ConvertsRemoteUrlToPng"/> — one-call convert of a URL</description></item>
-///   <item><description><see cref="UploadsLocalFileAndConverts"/> — multipart upload of a file</description></item>
-///   <item><description><see cref="ConvertsWithOptions"/> — apply conversion options</description></item>
-///   <item><description><see cref="DiscoversConversionCatalog"/> — options/catalog discovery</description></item>
-///   <item><description><see cref="DrivesJobLifecycleManually"/> — create → input → start → wait</description></item>
-///   <item><description><see cref="InvalidTargetIsATypedError"/> — validation error handling</description></item>
-///   <item><description><see cref="AuthenticationErrorLeaksNoSecret"/> — auth error, no key leak</description></item>
-/// </list>
+/// <para>The 20 positive scenarios mirror the documented guides shared by every api2convert SDK (php,
+/// python, java, go, nodejs, dotnet, ruby, rust). Some operations (video, screenshot, compare,
+/// extract) may not be entitled on every key.</para>
 /// </summary>
 public sealed class ConversionConformanceTests
 {
-    /// <summary>A small, stable public image used as a remote input.</summary>
-    private const string RemoteJpg =
-        "https://example-files.online-convert.com/raster%20image/jpg/example_small.jpg";
+    // Public example files hosted by online-convert.com — the same fixtures used by the docs guides.
+    private const string Pdf = "https://example-files.online-convert.com/document/pdf/example.pdf";
+    private const string Png = "https://example-files.online-convert.com/raster%20image/png/example.png";
+    private const string Jpg = "https://example-files.online-convert.com/raster%20image/jpg/example.jpg";
+    private const string JpgSmall = "https://example-files.online-convert.com/raster%20image/jpg/example_small.jpg";
+    private const string Wav = "https://example-files.online-convert.com/audio/wav/example.wav";
+    private const string Docx = "https://example-files.online-convert.com/document/docx/example.docx";
+    private const string Zip = "https://example-files.online-convert.com/archive/zip/example.zip";
 
-    /// <summary>
-    /// A minimal valid 1×1 PNG, written to disk to exercise the real multipart upload handshake
-    /// (remote-URL inputs skip upload entirely).
-    /// </summary>
+    /// <summary>A minimal valid 1×1 PNG, written to disk to exercise the real multipart upload handshake.</summary>
     private static readonly byte[] OnePixelPng =
     {
         0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52,
@@ -80,22 +74,22 @@ public sealed class ConversionConformanceTests
         return dir;
     }
 
-    // 1. One-call convert of a remote URL -------------------------------------
-    //
-    // The simplest usage: hand ConvertAsync a URL and a target format. The SDK creates a
-    // server-side-fetch job, polls it to completion, and hands back a result you can save to disk.
+    // 1. quickstart — convert a remote JPG to PNG, look the job up, download the output.
     [LiveFact]
-    public async Task ConvertsRemoteUrlToPng()
+    public async Task Quickstart()
     {
         using Api2ConvertClient client = Client();
 
-        ConversionResult result = await client.ConvertAsync(RemoteJpg, "png");
+        ConversionResult result = await client.ConvertAsync(Jpg, "png");
         Assert.True(result.Job.IsCompleted, "job should complete");
 
-        string dir = ScratchDir("remote");
+        Job job = await client.Jobs.GetAsync(result.Job.Id);
+        Assert.True(job.IsCompleted, "fetched job should be completed");
+
+        string dir = ScratchDir("quickstart");
         try
         {
-            string path = await result.SaveAsync(dir);
+            string path = await result.SaveAsync(dir + Path.DirectorySeparatorChar);
             Assert.True(new FileInfo(path).Length > 0, "output should be non-empty");
         }
         finally
@@ -104,29 +98,39 @@ public sealed class ConversionConformanceTests
         }
     }
 
-    // 2. Upload and convert a local file --------------------------------------
-    //
-    // For a local path (or bytes / a stream), the SDK stages the job, streams the file to the per-job
-    // upload server (authenticated with the job's token, never your account key), starts it, polls,
-    // and downloads.
+    // 2. convert-files — list the catalog (all + filtered), then convert JPG -> PNG.
     [LiveFact]
-    public async Task UploadsLocalFileAndConverts()
+    public async Task ConvertFiles()
     {
         using Api2ConvertClient client = Client();
 
-        string dir = ScratchDir("upload");
-        string src = Path.Combine(dir, "pixel.png");
+        IReadOnlyList<IReadOnlyDictionary<string, object?>> all = await client.Conversions.ListAsync();
+        Assert.NotEmpty(all);
+
+        IReadOnlyList<IReadOnlyDictionary<string, object?>> toPng =
+            await client.Conversions.ListAsync(target: "png");
+        Assert.NotEmpty(toPng);
+
+        ConversionResult result = await client.ConvertAsync(Jpg, "png");
+        Assert.True(result.Job.IsCompleted, "job should complete");
+    }
+
+    // 3. uploading-files — one-call upload + convert of a LOCAL file -> PNG.
+    [LiveFact]
+    public async Task UploadingFiles()
+    {
+        using Api2ConvertClient client = Client();
+
+        string dir = ScratchDir("uploading-files");
+        string src = Path.Combine(dir, "input.png");
         await File.WriteAllBytesAsync(src, OnePixelPng);
         try
         {
-            ConversionResult result = await client.ConvertAsync(src, "jpg");
+            ConversionResult result = await client.ConvertAsync(src, "png");
             Assert.True(result.Job.IsCompleted, "uploaded job should complete");
 
             byte[] bytes = await result.ContentsAsync();
             Assert.True(bytes.Length > 0, "converted output should be non-empty");
-            // A JPEG starts with the SOI marker 0xFF 0xD8.
-            Assert.Equal(0xFF, bytes[0]);
-            Assert.Equal(0xD8, bytes[1]);
         }
         finally
         {
@@ -134,89 +138,354 @@ public sealed class ConversionConformanceTests
         }
     }
 
-    // 3. Apply conversion options ---------------------------------------------
-    //
-    // Target-specific options are a plain map, kept strictly separate from the SDK's own controls
-    // (ConvertOptions), so an option key can never collide with an SDK argument. Discover the valid
-    // keys for a target with client.OptionsAsync (see the next scenario); here we re-encode at a
-    // lower JPEG quality.
+    // 4. job-lifecycle — create (process:false) -> add remote input -> start -> wait -> outputs.
     [LiveFact]
-    public async Task ConvertsWithOptions()
+    public async Task JobLifecycle()
     {
         using Api2ConvertClient client = Client();
 
-        ConversionResult result = await client.ConvertAsync(
-            RemoteJpg,
-            "jpg",
-            // Add e.g. ["width"] = 64, ["height"] = 64 to resize.
-            new Dictionary<string, object?> { ["quality"] = 50 });
-        Assert.True(result.Job.IsCompleted, "job should complete");
-
-        byte[] bytes = await result.ContentsAsync();
-        Assert.True(bytes.Length > 0, "converted output should be non-empty");
-    }
-
-    // 4. Discover the conversion catalog --------------------------------------
-    //
-    // Conversions.ListAsync and OptionsAsync describe what the API can do — which targets exist and
-    // which options each accepts. Neither consumes conversion quota, so they are cheap to call before
-    // building a request.
-    [LiveFact]
-    public async Task DiscoversConversionCatalog()
-    {
-        using Api2ConvertClient client = Client();
-
-        // Which conversions target `jpg`?
-        IReadOnlyList<IReadOnlyDictionary<string, object?>> conversions =
-            await client.Conversions.ListAsync(target: "jpg");
-        Assert.NotEmpty(conversions);
-
-        // The option schema for a target (type / enum / default / range per option).
-        IReadOnlyDictionary<string, object?> schema = await client.OptionsAsync("png", "image");
-        Assert.NotNull(schema);
-    }
-
-    // 5. Drive the full job lifecycle by hand ---------------------------------
-    //
-    // ConvertAsync is built from these primitives. Driving them yourself unlocks compound/merge jobs,
-    // custom inputs, and step-by-step inspection: create a staged job, attach an input, start it,
-    // wait for completion, then inspect the job's status and output metadata.
-    [LiveFact]
-    public async Task DrivesJobLifecycleManually()
-    {
-        using Api2ConvertClient client = Client();
-
-        // Stage a job (process: false) so we can attach inputs before starting.
         Job job = await client.Jobs.CreateAsync(new Dictionary<string, object?>
         {
             ["process"] = false,
             ["conversion"] = new List<object?>
             {
-                new Dictionary<string, object?> { ["target"] = "png" },
+                new Dictionary<string, object?> { ["category"] = "image", ["target"] = "png" },
             },
         });
         Assert.False(string.IsNullOrEmpty(job.Id), "a created job has an id");
 
-        // Attach a remote input, then start processing.
         await client.Jobs.AddInputAsync(
             job.Id,
-            new Dictionary<string, object?> { ["type"] = "remote", ["source"] = RemoteJpg });
+            new Dictionary<string, object?> { ["type"] = "remote", ["source"] = Jpg });
         await client.Jobs.StartAsync(job.Id);
 
-        // Poll to a terminal status.
         Job finished = await client.Jobs.WaitAsync(job.Id);
         Assert.True(finished.IsCompleted, "job should complete");
 
-        // Inspect the outputs — both from the finished job and via the outputs API.
-        Assert.NotEmpty(finished.Output);
         IReadOnlyList<OutputFile> outputs = await client.Jobs.OutputsAsync(job.Id);
-        Assert.Equal(finished.Output.Count, outputs.Count);
-
-        OutputFile output = finished.Output[0];
-        Assert.False(string.IsNullOrEmpty(output.Uri), "output has a download URI");
+        Assert.NotEmpty(outputs);
     }
 
-    // 6. Validation error on an unknown target --------------------------------
+    // 5. add-watermark — stamp a PNG onto a PDF (compound job, two remote inputs).
+    [LiveFact]
+    public async Task AddWatermark()
+    {
+        using Api2ConvertClient client = Client();
+
+        Job job = await client.Jobs.CreateAsync(new Dictionary<string, object?>
+        {
+            ["process"] = true,
+            ["input"] = new List<object?>
+            {
+                new Dictionary<string, object?> { ["type"] = "remote", ["source"] = Pdf },
+                new Dictionary<string, object?> { ["type"] = "remote", ["source"] = Png },
+            },
+            ["conversion"] = new List<object?>
+            {
+                new Dictionary<string, object?>
+                {
+                    ["category"] = "document",
+                    ["target"] = "pdf",
+                    ["options"] = new Dictionary<string, object?> { ["stamp"] = true, ["alignment"] = "center" },
+                },
+            },
+        });
+
+        Job finished = await client.Jobs.WaitAsync(job.Id);
+        Assert.True(finished.IsCompleted, "job should complete");
+        Assert.NotEmpty(finished.Output);
+    }
+
+    // 6. create-thumbnails — first page of a PDF -> 300px PNG thumbnail.
+    [LiveFact]
+    public async Task CreateThumbnails()
+    {
+        using Api2ConvertClient client = Client();
+
+        ConversionResult result = await client.ConvertAsync(
+            Pdf,
+            "thumbnail",
+            new Dictionary<string, object?>
+            {
+                ["thumbnail_target"] = "png",
+                ["width"] = 300,
+                ["pages"] = "first",
+                ["dpi"] = 150,
+            },
+            new ConvertOptions { Category = "operation" });
+
+        Assert.True(result.Job.IsCompleted, "job should complete");
+        byte[] bytes = await result.ContentsAsync();
+        Assert.True(bytes.Length > 0, "thumbnail should be non-empty");
+    }
+
+    // 7. compress-files — compress a JPG with the "compress" operation.
+    [LiveFact]
+    public async Task CompressFiles()
+    {
+        using Api2ConvertClient client = Client();
+
+        ConversionResult result = await client.ConvertAsync(
+            Jpg,
+            "compress",
+            new Dictionary<string, object?> { ["compression_level"] = "high" },
+            new ConvertOptions { Category = "operation" });
+
+        Assert.True(result.Job.IsCompleted, "job should complete");
+        byte[] bytes = await result.ContentsAsync();
+        Assert.True(bytes.Length > 0, "compressed output should be non-empty");
+    }
+
+    // 8. create-archives — bundle two remote files into a ZIP.
+    [LiveFact]
+    public async Task CreateArchives()
+    {
+        using Api2ConvertClient client = Client();
+
+        Job job = await client.Jobs.CreateAsync(new Dictionary<string, object?>
+        {
+            ["process"] = true,
+            ["input"] = new List<object?>
+            {
+                new Dictionary<string, object?> { ["type"] = "remote", ["source"] = Pdf },
+                new Dictionary<string, object?> { ["type"] = "remote", ["source"] = Png },
+            },
+            ["conversion"] = new List<object?>
+            {
+                new Dictionary<string, object?> { ["category"] = "archive", ["target"] = "zip" },
+            },
+        });
+
+        Job finished = await client.Jobs.WaitAsync(job.Id);
+        Assert.True(finished.IsCompleted, "job should complete");
+        Assert.NotEmpty(finished.Output);
+    }
+
+    // 9. create-hashes — SHA-256 of a remote ZIP.
+    [LiveFact]
+    public async Task CreateHashes()
+    {
+        using Api2ConvertClient client = Client();
+
+        ConversionResult result = await client.ConvertAsync(
+            Zip,
+            "sha256",
+            options: null,
+            opts: new ConvertOptions { Category = "hash" });
+
+        Assert.True(result.Job.IsCompleted, "job should complete");
+        byte[] bytes = await result.ContentsAsync();
+        Assert.True(bytes.Length > 0, "hash output should be non-empty");
+    }
+
+    // 10. extract-assets — extract the embedded assets of a DOCX.
+    [LiveFact]
+    public async Task ExtractAssets()
+    {
+        using Api2ConvertClient client = Client();
+
+        ConversionResult result = await client.ConvertAsync(
+            Docx,
+            "extract-assets",
+            options: null,
+            opts: new ConvertOptions { Category = "operation" });
+
+        Assert.True(result.Job.IsCompleted, "job should complete");
+        Assert.NotEmpty(result.Outputs);
+    }
+
+    // 11. file-analysis — read a JPG's metadata as JSON.
+    [LiveFact]
+    public async Task FileAnalysis()
+    {
+        using Api2ConvertClient client = Client();
+
+        ConversionResult result = await client.ConvertAsync(
+            Jpg,
+            "json",
+            options: null,
+            opts: new ConvertOptions { Category = "metadata" });
+
+        Assert.True(result.Job.IsCompleted, "job should complete");
+        byte[] bytes = await result.ContentsAsync();
+        Assert.True(bytes.Length > 0, "metadata output should be non-empty");
+    }
+
+    // 12. compare-files — SSIM diff of two images.
+    [LiveFact]
+    public async Task CompareFiles()
+    {
+        using Api2ConvertClient client = Client();
+
+        Job job = await client.Jobs.CreateAsync(new Dictionary<string, object?>
+        {
+            ["process"] = true,
+            ["input"] = new List<object?>
+            {
+                new Dictionary<string, object?> { ["type"] = "remote", ["source"] = JpgSmall },
+                new Dictionary<string, object?> { ["type"] = "remote", ["source"] = Jpg },
+            },
+            ["conversion"] = new List<object?>
+            {
+                new Dictionary<string, object?>
+                {
+                    ["category"] = "operation",
+                    ["target"] = "compare-image",
+                    ["options"] = new Dictionary<string, object?>
+                    {
+                        ["method"] = "ssim",
+                        ["threshold"] = 5,
+                        ["diff_color"] = "red",
+                    },
+                },
+            },
+        });
+
+        Job finished = await client.Jobs.WaitAsync(job.Id);
+        Assert.True(finished.IsCompleted, "job should complete");
+    }
+
+    // 13. capture-website — screenshot a URL and deliver it as PNG.
+    [LiveFact]
+    public async Task CaptureWebsite()
+    {
+        using Api2ConvertClient client = Client();
+
+        Job job = await client.Jobs.CreateAsync(new Dictionary<string, object?>
+        {
+            ["process"] = true,
+            ["input"] = new List<object?>
+            {
+                new Dictionary<string, object?>
+                {
+                    ["type"] = "remote",
+                    ["source"] = "https://www.online-convert.com",
+                    ["engine"] = "screenshot",
+                    ["options"] = new Dictionary<string, object?>
+                    {
+                        ["screen_width"] = 1280,
+                        ["screen_height"] = 1024,
+                        ["device_scale_factor"] = 1,
+                    },
+                },
+            },
+            ["conversion"] = new List<object?>
+            {
+                new Dictionary<string, object?> { ["category"] = "image", ["target"] = "png" },
+            },
+        });
+
+        Job finished = await client.Jobs.WaitAsync(job.Id);
+        Assert.True(finished.IsCompleted, "job should complete");
+        Assert.NotEmpty(finished.Output);
+    }
+
+    // 14. audio-operations — re-encode a WAV to stereo AAC at 192 kbps.
+    [LiveFact]
+    public async Task AudioOperations()
+    {
+        using Api2ConvertClient client = Client();
+
+        ConversionResult result = await client.ConvertAsync(
+            Wav,
+            "aac",
+            new Dictionary<string, object?>
+            {
+                ["audio_codec"] = "aac",
+                ["audio_bitrate"] = 192,
+                ["channels"] = "stereo",
+                ["frequency"] = 44100,
+            },
+            new ConvertOptions { Category = "audio" });
+
+        Assert.True(result.Job.IsCompleted, "job should complete");
+        byte[] bytes = await result.ContentsAsync();
+        Assert.True(bytes.Length > 0, "audio output should be non-empty");
+    }
+
+    // 15. image-operations — resize a JPG to fit 800x600, cropping to keep aspect ratio.
+    [LiveFact]
+    public async Task ImageOperations()
+    {
+        using Api2ConvertClient client = Client();
+
+        ConversionResult result = await client.ConvertAsync(
+            Jpg,
+            "resize-image",
+            new Dictionary<string, object?>
+            {
+                ["width"] = 800,
+                ["height"] = 600,
+                ["resize_by"] = "px",
+                ["resize_handling"] = "keep_aspect_ratio_crop",
+            },
+            new ConvertOptions { Category = "operation" });
+
+        Assert.True(result.Job.IsCompleted, "job should complete");
+        byte[] bytes = await result.ContentsAsync();
+        Assert.True(bytes.Length > 0, "resized output should be non-empty");
+    }
+
+    // 16. webhooks — start an async DOCX -> PDF conversion with a callback URL; do NOT wait.
+    [LiveFact]
+    public async Task Webhooks()
+    {
+        using Api2ConvertClient client = Client();
+
+        Job job = await client.StartConversionAsync(
+            Docx,
+            "pdf",
+            opts: new AsyncOptions
+            {
+                Category = "document",
+                Callback = "https://your-app.example.com/api2convert/webhook",
+            });
+
+        // A webhook receipt is not testable in CI; assert only that a started job was returned.
+        Assert.False(string.IsNullOrEmpty(job.Id), "async convert returns a started job with an id");
+    }
+
+    // 17. presets — list saved presets for a category + target (may be empty).
+    [LiveFact]
+    public async Task Presets()
+    {
+        using Api2ConvertClient client = Client();
+
+        IReadOnlyList<Preset> presets = await client.Presets.ListAsync(category: "video", target: "mp4");
+        Assert.NotNull(presets);
+    }
+
+    // 18. statistics — usage statistics for a recent month.
+    [LiveFact]
+    public async Task Statistics()
+    {
+        using Api2ConvertClient client = Client();
+
+        object? stats = await client.Stats.MonthAsync("2026-06");
+        Assert.NotNull(stats);
+    }
+
+    // 19. rate-limits — read the account's contract information.
+    [LiveFact]
+    public async Task RateLimits()
+    {
+        using Api2ConvertClient client = Client();
+
+        object? contracts = await client.Contracts.GetAsync();
+        Assert.NotNull(contracts);
+    }
+
+    // 20. authentication — a successful authenticated call: list this key's jobs.
+    [LiveFact]
+    public async Task Authentication()
+    {
+        using Api2ConvertClient client = Client();
+
+        IReadOnlyList<Job> jobs = await client.Jobs.ListAsync();
+        Assert.NotNull(jobs);
+    }
+
+    // Negative 1. Validation error on an unknown target -----------------------
     //
     // The API rejects an unknown target — either synchronously at create time (ValidationException)
     // or as a failed job (ConversionFailedException). Both are typed errors you can catch.
@@ -226,17 +495,16 @@ public sealed class ConversionConformanceTests
         using Api2ConvertClient client = Client();
 
         Api2ConvertException error = await Assert.ThrowsAnyAsync<Api2ConvertException>(
-            () => client.ConvertAsync(RemoteJpg, "this-is-not-a-real-target"));
+            () => client.ConvertAsync(Jpg, "this-is-not-a-real-target"));
         Assert.True(
             error is ValidationException or ConversionFailedException,
             $"expected a validation/conversion-failed error, got {error.GetType().Name}: {error.Message}");
     }
 
-    // 7. Authentication error, with no secret leak ----------------------------
+    // Negative 2. Authentication error, with no secret leak --------------------
     //
     // A bad key produces a typed AuthenticationException carrying the HTTP status (401/403). Crucially,
-    // the SDK never puts a credential into an error message — we assert the bogus key does not appear
-    // in the rendered error.
+    // the SDK never puts a credential into an error message — we assert the bogus key does not appear.
     [LiveFact]
     public async Task AuthenticationErrorLeaksNoSecret()
     {

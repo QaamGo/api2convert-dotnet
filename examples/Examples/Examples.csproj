@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- A single console project holding one runnable example per documented guide.
+       Not part of Api2Convert.sln, so the offline guardrail build ignores it. Run any guide by name,
+       passing the guide slug after the run separator, e.g. the "quickstart" guide.
+       Run with no argument to list every guide. Set API2CONVERT_BASE_URL to target another host. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <AssemblyName>api2convert-examples</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/Api2Convert/Api2Convert.csproj" />
+  </ItemGroup>
+
+</Project>
