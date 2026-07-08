@@ -11,6 +11,9 @@ jobs:
   publish:
     name: Publish to NuGet
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # lets GitHub mint the OIDC token nuget.org exchanges for a short-lived key
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -27,8 +30,13 @@ jobs:
           dotnet test test/Api2Convert.SecurityTests -c Release --no-build
       - name: Pack
         run: dotnet pack src/Api2Convert/Api2Convert.csproj -c Release --no-build -o artifacts
-      # Credentials come from a masked repository secret — never committed.
+      # Trusted publishing: exchange the GitHub OIDC token for a temporary (1-hour) nuget.org
+      # key. No long-lived secret is stored — the trust is a policy configured on nuget.org
+      # against this repo + workflow file. Do this immediately before the push (key is short-lived).
+      - name: NuGet login (OIDC → temporary key)
+        id: nuget-login
+        uses: NuGet/login@v1
+        with:
+          user: ${{ secrets.NUGET_USER }} # nuget.org profile username (not an email)
       - name: Push to NuGet
-        env:
-          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
-        run: dotnet nuget push "artifacts/*.nupkg" --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json --skip-duplicate
+        run: dotnet nuget push "artifacts/*.nupkg" --api-key "${{ steps.nuget-login.outputs.NUGET_API_KEY }}" --source https://api.nuget.org/v3/index.json --skip-duplicate
