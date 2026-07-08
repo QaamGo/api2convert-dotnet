@@ -1,5 +1,10 @@
 # API2Convert .NET SDK
 
+[![CI](https://github.com/QaamGo/api2convert-dotnet/actions/workflows/ci.yml/badge.svg)](https://github.com/QaamGo/api2convert-dotnet/actions/workflows/ci.yml)
+[![NuGet](https://img.shields.io/nuget/v/Api2Convert)](https://www.nuget.org/packages/Api2Convert)
+![.NET](https://img.shields.io/badge/.NET-%E2%89%A5%208.0-512bd4)
+![License](https://img.shields.io/badge/license-MIT-green)
+
 Official .NET / C# SDK for the [API2Convert](https://www.api2convert.com) file-conversion API.
 Convert, compress and transform images, documents, audio, video, ebooks, archives and CAD with one
 line of code.
