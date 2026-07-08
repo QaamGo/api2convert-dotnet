@@ -1,6 +1,7 @@
 # Build & test entry points for the API2Convert .NET SDK.
 #
 #   make check          # restore + build + unit + security (offline; the CI guardrail)
+#   make examples       # compile-check the runnable examples (guards guides vs API drift)
 #   make test           # offline unit suite
 #   make test-security  # independent security suite (real loopback servers)
 #   make test-live      # live conformance (needs API2CONVERT_API_KEY, e.g. the behat default key)
@@ -10,7 +11,7 @@
 SLN := Api2Convert.sln
 CONFIG ?= Release
 
-.PHONY: restore build test test-security test-live check pack format docker-check clean
+.PHONY: restore build test test-security test-live check examples pack format docker-check clean
 
 restore:
 	dotnet restore $(SLN)
@@ -32,6 +33,12 @@ test-live: build
 
 # The guardrail: everything that must pass offline, without an API key.
 check: build test test-security
+
+# Compile-check the runnable examples against real src (via <ProjectReference>) so an API drift
+# breaks the build instead of silently rotting the copy-paste guides. The examples project is
+# intentionally outside Api2Convert.sln, so it is deliberately NOT part of `check`/`docker-check`.
+examples:
+	dotnet build examples/Examples/Examples.csproj -c $(CONFIG)
 
 pack: build
 	dotnet pack src/Api2Convert/Api2Convert.csproj -c $(CONFIG) --no-build -o artifacts

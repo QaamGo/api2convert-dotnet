@@ -27,6 +27,12 @@ jobs:
         run: dotnet test test/Api2Convert.Tests -c Release --no-build --logger "console;verbosity=normal"
       - name: Security suite
         run: dotnet test test/Api2Convert.SecurityTests -c Release --no-build --logger "console;verbosity=normal"
+      # The runnable examples (examples/Examples/Examples.csproj) are intentionally excluded from
+      # Api2Convert.sln, so the build/test steps above never compile them. Compile-check them here —
+      # against real src via <ProjectReference> — so a public-API rename can't silently break the
+      # copy-paste guides. Kept out of the sln/release/Docker guardrail on purpose.
+      - name: Examples compile-check
+        run: dotnet build examples/Examples/Examples.csproj -c Release
 
   live:
     name: Live conformance
