@@ -70,6 +70,8 @@ public sealed class FakeHttpSender : IHttpSender
 
     public async Task<HttpResponse> SendAsync(HttpRequest request, CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         byte[] body;
         if (request.Body is not null)
         {

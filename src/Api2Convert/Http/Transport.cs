@@ -33,6 +33,13 @@ public sealed class Transport
     /// </summary>
     private const double MaxRetryAfterSeconds = 120.0;
 
+    /// <summary>
+    /// Cap on how much of a control-plane (API / error) JSON body the SDK buffers into memory, so a
+    /// hostile or buggy server cannot force an unbounded read (OOM) on these paths. File downloads are
+    /// streamed to disk and bounded separately.
+    /// </summary>
+    private const int MaxResponseBytes = 16 * 1024 * 1024; // 16 MiB
+
     private static readonly string UserAgent =
         $"api2convert-dotnet/{Api2ConvertClient.Version} dotnet/{Environment.Version}";
 
@@ -310,7 +317,26 @@ public sealed class Transport
         try
         {
             using var buffer = new MemoryStream();
-            await response.Body.CopyToAsync(buffer, cancellationToken).ConfigureAwait(false);
+            var chunk = new byte[81920];
+            while (true)
+            {
+                int read = await response.Body.ReadAsync(chunk, cancellationToken).ConfigureAwait(false);
+                if (read == 0)
+                {
+                    break;
+                }
+
+                // Refuse to buffer past the cap instead of an unbounded CopyToAsync: a control-plane body
+                // this large is hostile or buggy, and reading it whole would risk an OOM. We stop at the
+                // first over-cap read, so the offending bytes are never fully materialized.
+                if (buffer.Length + read > MaxResponseBytes)
+                {
+                    throw new NetworkException("API response body exceeds 16 MiB.");
+                }
+
+                buffer.Write(chunk, 0, read);
+            }
+
             return buffer.ToArray();
         }
         catch (IOException e)
