@@ -9,7 +9,9 @@ namespace Api2Convert.Resources;
 /// API usage statistics. The response shape is free-form, so these return the decoded body as-is
 /// (a dictionary or a list).
 ///
-/// <para><c>filter</c> is either an API key to scope to, or <c>all</c>.</para>
+/// <para><c>filter</c> is <c>single</c> (only the calling API key) or <c>all</c> (every key on the
+/// account, the default). The request is scoped by the <c>X-Oc-Api-Key</c> header, so never pass a
+/// key as <c>filter</c>.</para>
 /// </summary>
 public sealed class StatsResource
 {
