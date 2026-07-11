@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Api2Convert.Exceptions;
@@ -62,16 +63,23 @@ public sealed class FileDownload
         using HttpResponse response = await _transport
             .DownloadAsync(_output.Uri, Headers(downloadPassword), cancellationToken).ConfigureAwait(false);
 
+        // Stream to a sibling temp file and rename over the target only after a clean write+flush. This
+        // never truncates the target up front and never destroys a pre-existing complete file on a
+        // mid-stream failure — a download either fully replaces the target or leaves it untouched.
+        string tempPath = target + ".a2c-" + Guid.NewGuid().ToString("N") + ".part";
         try
         {
-            using FileStream output = File.Create(target);
-            await response.Body.CopyToAsync(output, cancellationToken).ConfigureAwait(false);
+            using (FileStream output = File.Create(tempPath))
+            {
+                await CopyBodyAsync(response.Body, output, cancellationToken).ConfigureAwait(false);
+            }
+
+            File.Move(tempPath, target, overwrite: true);
         }
         catch (Exception e)
         {
-            // A failed or aborted write (a disk error, a mid-stream network failure, or cancellation)
-            // must not leave a partial/corrupt file on disk. Delete it best-effort before rethrowing.
-            TryDelete(target);
+            // Clean up only the temp file — never the caller's pre-existing target.
+            TryDelete(tempPath);
             if (e is IOException or UnauthorizedAccessException)
             {
                 throw new Api2ConvertException($"Could not write file: {target}: {e.Message}", e);
@@ -81,6 +89,36 @@ public sealed class FileDownload
         }
 
         return target;
+    }
+
+    /// <summary>
+    /// Copy the download body to <paramref name="destination"/>, attributing a mid-stream failure to
+    /// the correct side: a read fault on the network response surfaces as a typed
+    /// <see cref="NetworkException"/> (not a filesystem error), while a write fault propagates as-is
+    /// (IOException) for the caller to label. Cancellation propagates unchanged.
+    /// </summary>
+    private static async Task CopyBodyAsync(Stream source, Stream destination, CancellationToken cancellationToken)
+    {
+        var buffer = new byte[81920];
+        while (true)
+        {
+            int read;
+            try
+            {
+                read = await source.ReadAsync(buffer, cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception e) when (e is IOException or HttpRequestException)
+            {
+                throw new NetworkException($"The download was interrupted: {e.Message}", e);
+            }
+
+            if (read == 0)
+            {
+                break;
+            }
+
+            await destination.WriteAsync(buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
+        }
     }
 
     /// <summary>
@@ -108,7 +146,7 @@ public sealed class FileDownload
         using HttpResponse response = await _transport
             .DownloadAsync(_output.Uri, Headers(downloadPassword), cancellationToken).ConfigureAwait(false);
         using var buffer = new MemoryStream();
-        await response.Body.CopyToAsync(buffer, cancellationToken).ConfigureAwait(false);
+        await CopyBodyAsync(response.Body, buffer, cancellationToken).ConfigureAwait(false);
         return buffer.ToArray();
     }
 

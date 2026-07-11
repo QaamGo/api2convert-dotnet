@@ -13,17 +13,38 @@ namespace Api2Convert.Tests;
 public sealed class FileDownloadTests : A2CTestBase
 {
     [Fact]
-    public async Task AFailedMidWriteLeavesNoPartialFileOnDisk()
+    public async Task AMidStreamNetworkReadFailureIsTypedAndLeavesNoFile()
     {
-        // The body yields a few bytes, then the read throws — a mid-stream network/disk failure. The
-        // save must delete whatever was already written rather than leave a truncated/corrupt file.
+        // The body yields a few bytes, then the read throws — a mid-stream network failure. It must be
+        // a typed NetworkException (not a filesystem "could not write" error) and leave no file behind.
         Http.AddRawStream(200, new FailingReadStream(Encoding.UTF8.GetBytes("PARTIAL")));
         string path = Path.Combine(Path.GetTempPath(), "a2c-" + Path.GetRandomFileName() + ".bin");
 
-        await Assert.ThrowsAsync<Api2ConvertException>(() =>
+        await Assert.ThrowsAsync<NetworkException>(() =>
             Client().Download(OutputFile.Of("o", "https://dl/x", "f.bin")).SaveAsync(path));
 
-        Assert.False(File.Exists(path), "a failed mid-write download must not leave a partial file behind");
+        Assert.False(File.Exists(path), "a failed download must not leave a partial file behind");
+    }
+
+    [Fact]
+    public async Task AFailedDownloadPreservesAPreExistingFile()
+    {
+        // Streaming to a temp file + atomic rename means a mid-stream failure must NOT destroy a
+        // previously-complete file at the target path (File.Create used to truncate it up front).
+        Http.AddRawStream(200, new FailingReadStream(Encoding.UTF8.GetBytes("PARTIAL")));
+        string path = Path.Combine(Path.GetTempPath(), "a2c-" + Path.GetRandomFileName() + ".bin");
+        await File.WriteAllTextAsync(path, "PREEXISTING COMPLETE FILE");
+        try
+        {
+            await Assert.ThrowsAsync<NetworkException>(() =>
+                Client().Download(OutputFile.Of("o", "https://dl/x", "f.bin")).SaveAsync(path));
+
+            Assert.Equal("PREEXISTING COMPLETE FILE", await File.ReadAllTextAsync(path));
+        }
+        finally
+        {
+            File.Delete(path);
+        }
     }
 
     [Fact]

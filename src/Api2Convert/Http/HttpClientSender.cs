@@ -32,17 +32,29 @@ public sealed class HttpClientSender : IHttpSender, IDisposable
 
     private readonly HttpClient _noRedirect;
     private readonly HttpClient _followRedirects;
+    private readonly HttpClient _streaming;
 
     public HttpClientSender(int timeoutSeconds)
     {
         var timeout = TimeSpan.FromSeconds(Math.Max(1, timeoutSeconds));
         _noRedirect = new HttpClient(new SocketsHttpHandler { AllowAutoRedirect = false }) { Timeout = timeout };
         _followRedirects = new HttpClient(new SocketsHttpHandler { AllowAutoRedirect = true }) { Timeout = timeout };
+        // A streamed upload transmits its whole body inside SendAsync, so a fixed whole-request Timeout
+        // would abort a large/slow upload once it exceeds TimeoutSeconds (the download body escapes this
+        // via ResponseHeadersRead, but the upload body cannot). Give streaming requests a client that
+        // bounds only the connect phase (ConnectTimeout) and lets the caller's CancellationToken govern
+        // the transfer. Uploads carry a secret (X-Oc-Token), so this client never follows redirects.
+        _streaming = new HttpClient(new SocketsHttpHandler { AllowAutoRedirect = false, ConnectTimeout = timeout })
+        {
+            Timeout = Timeout.InfiniteTimeSpan,
+        };
     }
 
     public async Task<HttpResponse> SendAsync(HttpRequest request, CancellationToken cancellationToken)
     {
-        HttpClient client = request.FollowRedirects ? _followRedirects : _noRedirect;
+        HttpClient client = request.StreamBody is not null
+            ? _streaming
+            : request.FollowRedirects ? _followRedirects : _noRedirect;
 
         Uri uri;
         try
@@ -115,6 +127,7 @@ public sealed class HttpClientSender : IHttpSender, IDisposable
     {
         _noRedirect.Dispose();
         _followRedirects.Dispose();
+        _streaming.Dispose();
     }
 
     private static IReadOnlyDictionary<string, string> CollectHeaders(HttpResponseMessage response)

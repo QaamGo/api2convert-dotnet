@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -53,6 +54,21 @@ public sealed class LoopbackServer : IDisposable
     /// <summary>A server that answers every request with the given status and body.</summary>
     public static LoopbackServer Responding(int status, string body) =>
         new(ctx => WriteBody(ctx, status, body));
+
+    /// <summary>
+    /// A server that drains the request body, waits <paramref name="delay"/>, then responds — used to
+    /// prove a streamed transfer is not aborted by the client's whole-request timeout.
+    /// </summary>
+    public static LoopbackServer RespondingAfterDelay(int status, string body, TimeSpan delay) => new(ctx =>
+    {
+        using (Stream input = ctx.Request.InputStream)
+        {
+            input.CopyTo(Stream.Null);
+        }
+
+        Thread.Sleep(delay);
+        WriteBody(ctx, status, body);
+    });
 
     /// <summary>A server that 302-redirects every request to <paramref name="location"/>.</summary>
     public static LoopbackServer RedirectingTo(string location) => new(ctx =>

@@ -33,6 +33,31 @@ public sealed class SecurityTests
         return builder.Build();
     }
 
+    // -------------------- streaming timeout (H2) --------------------
+
+    [Fact]
+    public async Task ASlowUploadIsNotCappedByThePerRequestTimeout()
+    {
+        // A streamed upload transmits its whole body inside SendAsync, so a whole-request timeout would
+        // abort a large/slow upload. The server delays its response well past the (floored 1s) timeout;
+        // the upload must still succeed because a streamed transfer is bounded only by the caller.
+        using var server = LoopbackServer.RespondingAfterDelay(
+            200, "{\"id\":\"in-1\",\"type\":\"upload\"}", TimeSpan.FromMilliseconds(1500));
+        var config = new Config.Builder().MaxRetries(0).Timeout(1).Build();
+        using var client = new Api2ConvertClient("k", config);
+
+        var job = Job.FromDict(new Dictionary<string, object?>
+        {
+            ["id"] = "job-9",
+            ["token"] = "tok-abc",
+            ["server"] = server.BaseUrl,
+            ["status"] = new Dictionary<string, object?> { ["code"] = "incomplete" },
+        });
+
+        InputFile input = await client.Jobs.UploadAsync(job, Encoding.UTF8.GetBytes("hello world"));
+        Assert.Equal("in-1", input.Id);
+    }
+
     // -------------------- secret hygiene --------------------
 
     [Fact]

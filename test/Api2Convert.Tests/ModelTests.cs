@@ -68,6 +68,16 @@ public sealed class ModelTests
         Assert.Null(Data.NullableLong(true));
         Assert.Null(Data.NullableLong("not-a-number"));
         Assert.Null(Data.NullableLong(null));
+
+        // Out-of-long-range values hydrate to null (absence), never to a garbage wrap. A bare (long)d
+        // cast would yield long.MinValue for these.
+        Assert.Null(Data.NullableLong(1e19));
+        Assert.Null(Data.NullableLong(-1e19));
+        Assert.Null(Data.NullableLong("1e19"));
+        Assert.Null(Data.NullableLong(double.NaN));
+        Assert.Null(Data.NullableLong(double.PositiveInfinity));
+        // NullableInt likewise returns null (not a wrapped value) for out-of-int-range input.
+        Assert.Null(Data.NullableInt(9999999999L));
     }
 
     // Local JSON parse helper (ModelTests does not extend A2CTestBase).

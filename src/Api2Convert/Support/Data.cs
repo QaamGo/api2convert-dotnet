@@ -39,7 +39,13 @@ internal static class Data
     public static int? NullableInt(object? value)
     {
         long? l = NullableLong(value);
-        return l is null ? null : unchecked((int)l.Value);
+        if (l is null || l.Value < int.MinValue || l.Value > int.MaxValue)
+        {
+            // Out of int range: return null (absence) rather than silently wrapping to a garbage value.
+            return null;
+        }
+
+        return (int)l.Value;
     }
 
     /// <summary>
@@ -56,7 +62,7 @@ internal static class Data
             case int i:
                 return i;
             case double d:
-                return (long)d;
+                return DoubleToLong(d);
             case string s:
                 string t = s.Trim();
                 if (long.TryParse(t, NumberStyles.Integer, CultureInfo.InvariantCulture, out long parsed))
@@ -66,13 +72,30 @@ internal static class Data
 
                 if (double.TryParse(t, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsedDouble))
                 {
-                    return (long)parsedDouble;
+                    return DoubleToLong(parsedDouble);
                 }
 
                 return null;
             default:
                 return null;
         }
+    }
+
+    /// <summary>
+    /// Truncate a double to a long, or null when it is NaN / Infinity or falls outside long range. A
+    /// bare <c>(long)d</c> cast is unchecked and yields a garbage value (long.MinValue on overflow),
+    /// which would hydrate nonsense instead of signalling absence.
+    /// </summary>
+    private static long? DoubleToLong(double d)
+    {
+        // long.MaxValue (2^63-1) is not exactly representable as a double, so use 2^63 as the
+        // exclusive upper bound; long.MinValue (-2^63) is exact and allowed.
+        if (double.IsNaN(d) || d < long.MinValue || d >= 9223372036854775808.0)
+        {
+            return null;
+        }
+
+        return (long)d;
     }
 
     public static bool Bool(object? value, bool defaultValue) => value is bool b ? b : defaultValue;
