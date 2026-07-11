@@ -10,7 +10,7 @@ namespace Api2Convert.Resources;
 /// (a dictionary or a list).
 ///
 /// <para><c>filter</c> is <c>single</c> (only the calling API key) or <c>all</c> (every key on the
-/// account, the default). The request is scoped by the <c>X-Oc-Api-Key</c> header, so never pass a
+/// account, the default). The request is scoped by the <c>X-Api2convert-Api-Key</c> header, so never pass a
 /// key as <c>filter</c>.</para>
 /// </summary>
 public sealed class StatsResource

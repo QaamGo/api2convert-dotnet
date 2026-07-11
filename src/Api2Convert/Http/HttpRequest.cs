@@ -16,7 +16,7 @@ namespace Api2Convert.Http;
 /// <param name="FollowRedirects">
 /// whether the sender may follow a redirect for this request. Must be false for any request carrying
 /// an auth header (the account key / per-job token / download password travel in custom
-/// <c>X-Oc-*</c> headers that a redirect-following client would forward to another host); only the
+/// <c>X-Api2convert-*</c> headers that a redirect-following client would forward to another host); only the
 /// self-contained, no-secret download path sets it true.
 /// </param>
 /// <param name="Replayable">

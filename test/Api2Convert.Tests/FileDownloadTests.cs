@@ -121,7 +121,7 @@ public sealed class FileDownloadTests : A2CTestBase
 
         await Client().Download(OutputFile.Of("o", "https://dl.example.com/x", "f.pdf"), "s3cret").ContentsAsync();
 
-        Assert.Equal("s3cret", RequestAt(0).Header("X-Oc-Download-Password"));
+        Assert.Equal("s3cret", RequestAt(0).Header("X-Api2convert-Download-Password"));
         Assert.False(RequestAt(0).FollowRedirects);
     }
 
@@ -133,7 +133,7 @@ public sealed class FileDownloadTests : A2CTestBase
         await Client().Download(OutputFile.Of("o", "https://dl.example.com/x", "f.pdf")).ContentsAsync();
 
         Assert.True(RequestAt(0).FollowRedirects);
-        Assert.Equal("", RequestAt(0).Header("X-Oc-Download-Password"));
+        Assert.Equal("", RequestAt(0).Header("X-Api2convert-Download-Password"));
     }
 
     /// <summary>

@@ -81,7 +81,7 @@ public sealed class Transport
     {
         var requestHeaders = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
-            ["X-Oc-Api-Key"] = _apiKey,
+            ["X-Api2convert-Api-Key"] = _apiKey,
         };
         if (headers is not null)
         {
@@ -169,7 +169,7 @@ public sealed class Transport
     {
         await EnsureSuccessfulAsync(response, cancellationToken).ConfigureAwait(false);
 
-        // Every API request rides the no-follow path (secrets travel in X-Oc-* headers), so a 3xx
+        // Every API request rides the no-follow path (secrets travel in X-Api2convert-* headers), so a 3xx
         // passes EnsureSuccessfulAsync (status < 400) but was deliberately not followed. Decoding its
         // body would yield an empty model; surface it as a typed error instead — mirroring the
         // DownloadAsync guard so an un-followed redirect is never silently swallowed.
@@ -237,8 +237,8 @@ public sealed class Transport
     ///
     /// <para>Redirect-following is enabled ONLY when the request carries no secret. The account key /
     /// token never use this path, but a download password travels in the custom
-    /// <c>X-Oc-Download-Password</c> header, and a redirect-following client forwards custom headers
-    /// across a cross-host redirect — so a request carrying any <c>X-Oc-*</c> header must not follow
+    /// <c>X-Api2convert-Download-Password</c> header, and a redirect-following client forwards custom headers
+    /// across a cross-host redirect — so a request carrying any <c>X-Api2convert-*</c> header must not follow
     /// redirects. A plain, passwordless download URL may still redirect (storage/CDN).</para>
     /// </summary>
     public async Task<HttpResponse> DownloadAsync(
@@ -249,7 +249,7 @@ public sealed class Transport
         bool carriesSecret = false;
         foreach (string name in headers.Keys)
         {
-            if (name.StartsWith("X-Oc-", StringComparison.OrdinalIgnoreCase))
+            if (name.StartsWith("X-Api2convert-", StringComparison.OrdinalIgnoreCase))
             {
                 carriesSecret = true;
                 break;

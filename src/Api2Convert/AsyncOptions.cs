@@ -19,7 +19,7 @@ public sealed class AsyncOptions
 
     /// <summary>
     /// Protect the result with this password. The returned <see cref="Models.Job"/> is not a result
-    /// wrapper, so a later download must supply the <c>X-Oc-Download-Password</c> header.
+    /// wrapper, so a later download must supply the <c>X-Api2convert-Download-Password</c> header.
     /// </summary>
     public string? DownloadPassword { get; init; }
 }

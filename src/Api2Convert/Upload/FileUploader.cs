@@ -16,7 +16,7 @@ namespace Api2Convert.Upload;
 ///
 /// <para>This step is intentionally hand-written: it is NOT described by the OpenAPI spec. It posts a
 /// <c>multipart/form-data</c> body (field <c>file</c>) to <c>{job.Server}/upload-file/{job.Id}</c> and
-/// authenticates with the per-job <c>X-Oc-Token</c> header — <strong>never the account API
+/// authenticates with the per-job <c>X-Api2convert-Token</c> header — <strong>never the account API
 /// key</strong>. The body is streamed, so large files do not have to be read into memory.</para>
 /// </summary>
 public sealed class FileUploader
@@ -58,7 +58,7 @@ public sealed class FileUploader
 
         var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
-            ["X-Oc-Token"] = job.Token,
+            ["X-Api2convert-Token"] = job.Token,
             ["Content-Type"] = "multipart/form-data; boundary=" + boundary,
         };
 

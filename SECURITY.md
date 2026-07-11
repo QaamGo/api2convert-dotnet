@@ -13,11 +13,11 @@ Report it privately through GitHub's **"Report a vulnerability"** button under t
 The library handles several secrets on the caller's behalf — keep all of them out of source control
 and configure them via environment variables or a secret manager:
 
-- the **account API key** (`X-Oc-Api-Key`) — read from configuration/environment
+- the **account API key** (`X-Api2convert-Api-Key`) — read from configuration/environment
   (`API2CONVERT_API_KEY`) and sent only over TLS to the API host, never in a URL query string;
-- the **per-job upload token** (`X-Oc-Token`) — used to authenticate uploads to the per-job upload
+- the **per-job upload token** (`X-Api2convert-Token`) — used to authenticate uploads to the per-job upload
   server; the account key is **never** sent there;
-- the **download password** (`X-Oc-Download-Password`) — sent only to fetch a protected output;
+- the **download password** (`X-Api2convert-Download-Password`) — sent only to fetch a protected output;
 - the **webhook signing secret** — used locally to verify callback signatures (HMAC-SHA256 over the
   raw request body, constant-time comparison via `CryptographicOperations.FixedTimeEquals`). The
   signature is delivered in the `X-Oc-Signature` header.
@@ -29,11 +29,11 @@ Each of these is proven by the independent security suite in
 `make test-security`), which uses **real loopback HTTP servers** for the redirect guarantees.
 
 - The SDK never logs a key/token and never places one in an exception message or a URL/query string.
-- A request that carries **any secret in a custom `X-Oc-*` header never follows an HTTP redirect** — a
+- A request that carries **any secret in a custom `X-Api2convert-*` header never follows an HTTP redirect** — a
   redirect could otherwise forward the secret to another host (.NET's `HttpClient` strips
-  `Authorization` on a cross-host redirect, but not arbitrary `X-Oc-*` headers). This covers the
-  account key (`X-Oc-Api-Key`), the per-job upload token (`X-Oc-Token`) **and** a download password
-  (`X-Oc-Download-Password`). Only a plain, passwordless download (`GET output.Uri`, which carries no
+  `Authorization` on a cross-host redirect, but not arbitrary `X-Api2convert-*` headers). This covers the
+  account key (`X-Api2convert-Api-Key`), the per-job upload token (`X-Api2convert-Token`) **and** a download password
+  (`X-Api2convert-Download-Password`). Only a plain, passwordless download (`GET output.Uri`, which carries no
   secret) follows redirects, so storage/CDN URLs still resolve. This is enforced with two
   `HttpClientHandler`s (one with `AllowAutoRedirect = false`, one with it enabled), chosen per request.
 - A directory download uses a **sanitized basename** derived from the API-supplied filename, so a

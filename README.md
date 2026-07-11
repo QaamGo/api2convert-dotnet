@@ -71,7 +71,7 @@ var result = await client.ConvertAsync(
 ```
 
 A download password supplied at conversion time is **remembered** on the result and sent
-automatically (as `X-Oc-Download-Password`) on every download from it.
+automatically (as `X-Api2convert-Download-Password`) on every download from it.
 
 ## Async (webhook-driven) conversions
 

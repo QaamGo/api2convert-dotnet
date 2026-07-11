@@ -16,7 +16,7 @@ namespace Api2Convert.SecurityTests;
 
 /// <summary>
 /// The independent security suite. Black-box: it uses only the public Api2Convert surface. The
-/// redirect guarantees are proven with REAL loopback servers — a secret in a custom <c>X-Oc-*</c>
+/// redirect guarantees are proven with REAL loopback servers — a secret in a custom <c>X-Api2convert-*</c>
 /// header must never be forwarded to a redirect target. Header/JSON/classifier checks use the public
 /// <see cref="IHttpSender"/> seam, where a real round-trip adds nothing.
 /// </summary>
@@ -72,7 +72,7 @@ public sealed class SecurityTests
         Assert.DoesNotContain(secret, ex.Message, StringComparison.Ordinal);
         Assert.DoesNotContain(secret, ex.ToString(), StringComparison.Ordinal);
         // ...but it WAS sent as the auth header (the request was genuinely authenticated).
-        Assert.Equal(secret, api.HeadersReceived[0]["X-Oc-Api-Key"]);
+        Assert.Equal(secret, api.HeadersReceived[0]["X-Api2convert-Api-Key"]);
     }
 
     [Fact]
@@ -125,14 +125,14 @@ public sealed class SecurityTests
             ["status"] = new Dictionary<string, object?> { ["code"] = "incomplete" },
         });
 
-        // The upload sends X-Oc-Token (never the account key), does not follow the 302,
+        // The upload sends X-Api2convert-Token (never the account key), does not follow the 302,
         // and surfaces the un-followed redirect as a typed error rather than swallowing it.
         await Assert.ThrowsAsync<NetworkException>(
             () => client.Jobs.UploadAsync(job, Encoding.UTF8.GetBytes("hello")));
 
         Assert.True(uploadServer.Hits >= 1);
-        Assert.Equal("tok-abc", uploadServer.HeadersReceived[0]["X-Oc-Token"]);
-        Assert.False(uploadServer.HeadersReceived[0].ContainsKey("X-Oc-Api-Key"));
+        Assert.Equal("tok-abc", uploadServer.HeadersReceived[0]["X-Api2convert-Token"]);
+        Assert.False(uploadServer.HeadersReceived[0].ContainsKey("X-Api2convert-Api-Key"));
         Assert.Equal(0, evil.Hits); // an authenticated upload must not follow a redirect
     }
 
@@ -151,7 +151,7 @@ public sealed class SecurityTests
 
         Assert.Equal(0, evil.Hits); // the download password must never reach the redirect target
         // ...but it WAS sent to the intended storage host (the request was real).
-        Assert.Equal("s3cret", storage.HeadersReceived[0]["X-Oc-Download-Password"]);
+        Assert.Equal("s3cret", storage.HeadersReceived[0]["X-Api2convert-Download-Password"]);
     }
 
     [Fact]

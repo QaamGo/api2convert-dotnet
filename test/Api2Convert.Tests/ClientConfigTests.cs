@@ -38,7 +38,7 @@ public sealed class ClientConfigTests : A2CTestBase
 
             await client.Jobs.GetAsync("job-1");
 
-            Assert.Equal("env-key", RequestAt(0).Header("X-Oc-Api-Key"));
+            Assert.Equal("env-key", RequestAt(0).Header("X-Api2convert-Api-Key"));
         }
         finally
         {

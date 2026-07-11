@@ -195,7 +195,7 @@ public sealed class FileDownload
     {
         string? password = downloadPassword ?? _downloadPassword;
         return password is not null
-            ? new Dictionary<string, string> { ["X-Oc-Download-Password"] = password }
+            ? new Dictionary<string, string> { ["X-Api2convert-Download-Password"] = password }
             : new Dictionary<string, string>(0);
     }
 }

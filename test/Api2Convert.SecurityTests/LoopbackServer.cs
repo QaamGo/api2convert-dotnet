@@ -11,7 +11,7 @@ namespace Api2Convert.SecurityTests;
 
 /// <summary>
 /// A real loopback HTTP server (backed by <see cref="HttpListener"/>) bound to 127.0.0.1 on a free
-/// port. Only a genuine cross-host 302 can prove the transport does not forward an <c>X-Oc-*</c>
+/// port. Only a genuine cross-host 302 can prove the transport does not forward an <c>X-Api2convert-*</c>
 /// secret header to a redirect target — a mock cannot. Records the headers of every request it
 /// receives and counts hits.
 /// </summary>

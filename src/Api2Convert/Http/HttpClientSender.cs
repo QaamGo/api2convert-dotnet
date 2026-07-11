@@ -13,7 +13,7 @@ namespace Api2Convert.Http;
 /// third-party HTTP dependency).
 ///
 /// <para>Redirect policy is handler-level in .NET, so this holds two clients: one that never follows
-/// redirects (used for every request carrying an <c>X-Oc-*</c> secret — the account key / per-job
+/// redirects (used for every request carrying an <c>X-Api2convert-*</c> secret — the account key / per-job
 /// token / download password ride in custom headers that a redirect-following client would forward
 /// across hosts) and one that follows normal redirects (used only for the self-contained,
 /// no-secret download path, where storage URLs legitimately redirect). The choice is made per
@@ -43,7 +43,7 @@ public sealed class HttpClientSender : IHttpSender, IDisposable
         // would abort a large/slow upload once it exceeds TimeoutSeconds (the download body escapes this
         // via ResponseHeadersRead, but the upload body cannot). Give streaming requests a client that
         // bounds only the connect phase (ConnectTimeout) and lets the caller's CancellationToken govern
-        // the transfer. Uploads carry a secret (X-Oc-Token), so this client never follows redirects.
+        // the transfer. Uploads carry a secret (X-Api2convert-Token), so this client never follows redirects.
         _streaming = new HttpClient(new SocketsHttpHandler { AllowAutoRedirect = false, ConnectTimeout = timeout })
         {
             Timeout = Timeout.InfiniteTimeSpan,
@@ -82,7 +82,7 @@ public sealed class HttpClientSender : IHttpSender, IDisposable
         if (content is not null)
         {
             // Content-Type / Content-* belong on the content, not the request; everything else
-            // (Accept, User-Agent, X-Oc-*, Idempotency-Key) is a request header.
+            // (Accept, User-Agent, X-Api2convert-*, Idempotency-Key) is a request header.
             content.Headers.Clear();
         }
 

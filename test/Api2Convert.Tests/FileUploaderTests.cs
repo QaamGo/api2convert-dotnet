@@ -18,8 +18,8 @@ public sealed class FileUploaderTests : A2CTestBase
 
         await Client().Jobs.UploadAsync(StagedJob(), Encoding.UTF8.GetBytes("hello"));
 
-        Assert.Equal("tok-abc", RequestAt(0).Header("X-Oc-Token"));
-        Assert.Equal("", RequestAt(0).Header("X-Oc-Api-Key"));
+        Assert.Equal("tok-abc", RequestAt(0).Header("X-Api2convert-Token"));
+        Assert.Equal("", RequestAt(0).Header("X-Api2convert-Api-Key"));
         Assert.False(RequestAt(0).FollowRedirects);
         Assert.EndsWith("/upload-file/job-9", RequestAt(0).Uri);
     }

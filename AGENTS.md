@@ -61,9 +61,9 @@ junior-friendly surface — one-call `ConvertAsync()` — and use AI to keep it 
   errors. Secret-scan before any release.
 - **The contract is law.** Public method names, signatures and semantics match `docs/SDK_CONTRACT.md`
   across every SDK language, adapted only to C# idiom (see divergences below).
-- **Upload uses the per-job `X-Oc-Token`, never the account key.** There is a test for this.
+- **Upload uses the per-job `X-Api2convert-Token`, never the account key.** There is a test for this.
 - **Secret-bearing requests never follow redirects.** The key/token/download-password ride in custom
-  `X-Oc-*` headers that a redirect-following client would forward across hosts. Only the no-secret
+  `X-Api2convert-*` headers that a redirect-following client would forward across hosts. Only the no-secret
   download path follows redirects (a second `HttpClientHandler`). `Api2Convert.SecurityTests` proves
   the guarantee with real servers.
 - **`ConvertAsync()` stays one call** for the common case (path/URL/stream → `to` → `SaveAsync()`).

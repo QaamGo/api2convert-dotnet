@@ -27,7 +27,7 @@ public sealed class ConvertTests : A2CTestBase
         Assert.EndsWith("/v2/jobs", RequestAt(0).Uri);
         IReadOnlyDictionary<string, object?> body = RequestAt(0).BodyJson();
         Assert.Equal(true, body["process"]);
-        Assert.Equal("test-key", RequestAt(0).Header("X-Oc-Api-Key"));
+        Assert.Equal("test-key", RequestAt(0).Header("X-Api2convert-Api-Key"));
 
         // Second request polls the job.
         Assert.Equal("GET", RequestAt(1).Method);
@@ -54,7 +54,7 @@ public sealed class ConvertTests : A2CTestBase
             Assert.Equal("POST", RequestAt(0).Method);
             Assert.Equal(false, RequestAt(0).BodyJson()["process"]);
             Assert.EndsWith("/upload-file/job-1", RequestAt(1).Uri);
-            Assert.Equal("tok", RequestAt(1).Header("X-Oc-Token"));
+            Assert.Equal("tok", RequestAt(1).Header("X-Api2convert-Token"));
             Assert.Equal("PATCH", RequestAt(2).Method);
             Assert.Equal("GET", RequestAt(3).Method);
         }
@@ -129,6 +129,6 @@ public sealed class ConvertTests : A2CTestBase
 
         // password is remembered: the download auto-sends it
         await result.ContentsAsync();
-        Assert.Equal("s3cret", Http.Last().Header("X-Oc-Download-Password"));
+        Assert.Equal("s3cret", Http.Last().Header("X-Api2convert-Download-Password"));
     }
 }
