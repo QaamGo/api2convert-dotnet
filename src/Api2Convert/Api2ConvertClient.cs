@@ -104,7 +104,7 @@ public sealed class Api2ConvertClient : IDisposable
     /// <para>Hand it a local path, a public URL, or an open stream, name the target format, and get back
     /// a result you can <c>SaveAsync()</c>.</para>
     /// </summary>
-    /// <param name="input">a local path <see cref="string"/>, a URL (<c>^https?://</c>), a <see cref="System.IO.FileInfo"/>, a <c>byte[]</c> or a <see cref="System.IO.Stream"/>.</param>
+    /// <param name="input">a local path <see cref="string"/>, a URL (<c>^https?://</c>), a <see cref="System.IO.FileInfo"/>, a <c>byte[]</c>, a <see cref="System.IO.Stream"/>, or a <see cref="Models.CloudInput"/> (imported from customer storage, like a URL: a single started job).</param>
     /// <param name="to">target format, e.g. <c>pdf</c>, <c>jpg</c>, <c>mp4</c>.</param>
     /// <param name="options">target-specific conversion options (discover via <see cref="OptionsAsync"/>); may be null.</param>
     /// <param name="opts">optional less-common controls (category, timeout, output index, ...); may be null.</param>
@@ -118,7 +118,7 @@ public sealed class Api2ConvertClient : IDisposable
     {
         ConvertOptions o = opts ?? new ConvertOptions();
         Job job = await StartConversionInternalAsync(
-            input, to, options, o.Category, callback: null, o.Filename, o.DownloadPassword, cancellationToken)
+            input, to, options, o.Category, callback: null, o.Filename, o.DownloadPassword, o.OutputTargets, cancellationToken)
             .ConfigureAwait(false);
         Job done = await Jobs.WaitAsync(job.Id, o.Timeout, throwOnFailure: true, cancellationToken).ConfigureAwait(false);
         return new ConversionResult(done, _transport, o.OutputIndex ?? 0, o.DownloadPassword);
@@ -141,7 +141,7 @@ public sealed class Api2ConvertClient : IDisposable
     {
         AsyncOptions o = opts ?? new AsyncOptions();
         return StartConversionInternalAsync(
-            input, to, options, o.Category, o.Callback, o.Filename, o.DownloadPassword, cancellationToken);
+            input, to, options, o.Category, o.Callback, o.Filename, o.DownloadPassword, o.OutputTargets, cancellationToken);
     }
 
     /// <summary>A <see cref="FileDownload"/> for an output file: <c>await client.Download(out).SaveAsync("./out/")</c>.</summary>
@@ -192,6 +192,7 @@ public sealed class Api2ConvertClient : IDisposable
         string? callback,
         string? filename,
         string? downloadPassword,
+        IReadOnlyList<Models.OutputTarget>? outputTargets,
         CancellationToken cancellationToken)
     {
         var conversion = new Dictionary<string, object?> { ["target"] = to };
@@ -205,6 +206,19 @@ public sealed class Api2ConvertClient : IDisposable
             conversion["options"] = options;
         }
 
+        // Cloud delivery targets ride the conversion's output_target — never merged into options, so an
+        // open-ended API option key can never collide with an SDK control.
+        if (outputTargets is { Count: > 0 })
+        {
+            var targets = new List<object?>(outputTargets.Count);
+            foreach (Models.OutputTarget target in outputTargets)
+            {
+                targets.Add(target.ToDescriptor());
+            }
+
+            conversion["output_target"] = targets;
+        }
+
         var job = new Dictionary<string, object?> { ["conversion"] = new List<object?> { conversion } };
         if (callback is not null)
         {
@@ -215,6 +229,15 @@ public sealed class Api2ConvertClient : IDisposable
         if (downloadPassword is not null)
         {
             job["download_passwords"] = new List<object?> { downloadPassword };
+        }
+
+        // A cloud input, like a remote URL, is a single started job: the API fetches it — nothing is
+        // staged or uploaded.
+        if (input is Models.CloudInput cloud)
+        {
+            job["process"] = true;
+            job["input"] = new List<object?> { cloud.ToDescriptor() };
+            return await Jobs.CreateAsync(job, cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
         if (input is string source && HttpUrl.IsMatch(source))

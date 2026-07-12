@@ -214,8 +214,12 @@ public sealed class Transport
             return;
         }
 
-        IReadOnlyDictionary<string, object?> body =
-            DecodeSafe(await ReadBodyAsync(response, cancellationToken).ConfigureAwait(false));
+        // Deep-redact the decoded error body before it is attached to the exception: a future
+        // server/proxy that echoed a submitted credential value (the API only ever echoes field names)
+        // must not leak it through the exception's body. The message is taken from the response's own
+        // `message` field — never derived from the request body.
+        IReadOnlyDictionary<string, object?> body = Redactor.RedactBody(
+            DecodeSafe(await ReadBodyAsync(response, cancellationToken).ConfigureAwait(false)));
         string message = body.GetValueOrDefault("message") is string s ? s : $"Request failed (HTTP {status})";
         string? requestId = EmptyToNull(response.Header("X-Request-Id"));
 

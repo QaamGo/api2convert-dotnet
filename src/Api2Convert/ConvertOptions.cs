@@ -1,3 +1,6 @@
+using System.Collections.Generic;
+using Api2Convert.Models;
+
 namespace Api2Convert;
 
 /// <summary>
@@ -24,4 +27,11 @@ public sealed class ConvertOptions
 
     /// <summary>Protect the result with this password; remembered and sent automatically on download.</summary>
     public string? DownloadPassword { get; init; }
+
+    /// <summary>
+    /// Cloud delivery targets attached to the conversion's <c>output_target</c> (never merged into the
+    /// options map). When set, the conversion delivers straight to your storage and produces no local
+    /// output, so the returned result's job is complete but exposes no downloadable output.
+    /// </summary>
+    public IReadOnlyList<OutputTarget>? OutputTargets { get; init; }
 }
