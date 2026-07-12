@@ -32,7 +32,7 @@ namespace Api2Convert;
 public sealed class Api2ConvertClient : IDisposable
 {
     /// <summary>SDK version, in lockstep with the sibling SDKs. Included in the User-Agent header.</summary>
-    public const string Version = "10.2.1";
+    public const string Version = "10.3.0";
 
     private static readonly Regex HttpUrl = new("^https?://", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
