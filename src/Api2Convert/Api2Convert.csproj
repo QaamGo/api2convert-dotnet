@@ -11,7 +11,7 @@
 
     <!-- NuGet package metadata -->
     <PackageId>Api2Convert</PackageId>
-    <Version>10.3.0</Version>
+    <Version>10.3.1</Version>
     <Authors>Qaamgo Media GmbH</Authors>
     <Company>Qaamgo Media GmbH</Company>
     <Product>API2Convert .NET SDK</Product>
