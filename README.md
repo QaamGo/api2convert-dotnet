@@ -120,6 +120,52 @@ Verification is HMAC-SHA256 over the raw body with a constant-time comparison. A
 deliberately skips verification (use `Webhooks().Parse(rawBody)` when signed webhooks are not enabled
 on your account yet).
 
+## Cloud storage
+
+Read an input straight from customer-owned storage (S3, Azure Blob, FTP, Google Cloud), deliver the
+converted output into a bucket, or both. Build a cloud **input** with a per-provider factory whose
+arguments carry each provider's required keys verbatim (flat/lowercase, exactly as the API expects) and
+hand it to `ConvertAsync` like any other input:
+
+```csharp
+using Api2Convert.Models;
+
+// Import from S3 — the API fetches the object itself (like a URL: a single started job).
+var input = CloudInput.AmazonS3(
+    bucket:          "my-bucket",
+    file:            "invoices/invoice.docx",
+    accesskeyid:     "AKIA...",
+    secretaccesskey: "...");
+
+var result = await client.ConvertAsync(input, "pdf");
+await result.SaveAsync("invoice.pdf");   // a normal, downloadable result
+```
+
+To deliver the **output** into a bucket, attach an `OutputTarget` via the `OutputTargets` option. Output
+uses the generic target (a `CloudProvider` plus free-form `parameters` / `credentials`), not a
+per-provider factory:
+
+```csharp
+using Api2Convert.Enums;
+using Api2Convert.Models;
+
+var target = OutputTarget.Of(
+    CloudProvider.AmazonS3,
+    parameters:  new Dictionary<string, object?> { ["bucket"] = "my-bucket", ["file"] = "out/invoice.pdf" },
+    credentials: new Dictionary<string, object?> { ["accesskeyid"] = "AKIA...", ["secretaccesskey"] = "..." });
+
+// With an output target set, the conversion delivers straight to your storage and produces no local
+// output — ConvertAsync returns the completed job (result.Job) and there is nothing to download.
+var result = await client.ConvertAsync(
+    "invoice.docx",
+    "pdf",
+    opts: new ConvertOptions { OutputTargets = new[] { target } });
+```
+
+`Azure`, `Ftp` and `GoogleCloud` input factories exist too (same shape). Credentials ride in the request
+body, so the SDK masks the whole `credentials` object to `[REDACTED]` in `ToString()` / logs and never
+prints or echoes it in error text.
+
 ## Full control: the Jobs API
 
 `ConvertAsync` is built on the resource API, which you can use directly for compound jobs, job
