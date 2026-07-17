@@ -18,7 +18,9 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.0.x'
+          dotnet-version: |
+            8.0.x
+            10.0.x
       - name: Live conformance
         run: dotnet test test/Api2Convert.LiveTests -c Release
         env:
