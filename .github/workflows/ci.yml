@@ -36,6 +36,33 @@ jobs:
       - name: Examples compile-check
         run: dotnet build examples/Examples/Examples.csproj -c Release
 
+  audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+      - name: Restore
+        run: dotnet restore Api2Convert.sln
+      # The shipped library has zero runtime PackageReferences by design; this covers the
+      # test toolchain and, more importantly, catches the day that stops being true.
+      # `dotnet list --vulnerable` exits non-zero on a finding on the 10.0 SDK, but older SDKs
+      # returned 0 and only printed the banner. Gate on both so neither behaviour is a silent pass.
+      - name: Vulnerable packages (incl. transitive)
+        run: |
+          set +e
+          dotnet list package --vulnerable --include-transitive 2>&1 | tee audit.log
+          status=${PIPESTATUS[0]}
+          set -e
+          if [ "$status" -ne 0 ] || grep -qi "has the following vulnerable packages" audit.log; then
+            echo "::error::vulnerable NuGet packages found"
+            exit 1
+          fi
+
   live:
     name: Live conformance
     runs-on: ubuntu-latest

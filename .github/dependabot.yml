@@ -1,0 +1,30 @@
+version: 2
+updates:
+  # NuGet. Resolved through Api2Convert.sln at the repo root, which covers src/, test/
+  # and examples/. The shipped library has zero runtime PackageReferences by design, so
+  # everything here is the test toolchain.
+  - package-ecosystem: nuget
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    groups:
+      # xunit and its runner release together; one PR per train.
+      xunit:
+        patterns:
+          - "xunit*"
+
+  # The Dockerfile used for local toolchain runs.
+  - package-ecosystem: docker
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+
+  # GitHub Actions used by CI and the release pipeline. Keeps the pinned action
+  # versions current (and, once SHA-pinned, updates the SHA + version comment).
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
