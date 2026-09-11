@@ -92,9 +92,9 @@ jobs:
   live:
     name: Live conformance
     runs-on: ubuntu-latest
-    # Only on master or a manual dispatch, and only when the key secret is present. The behat
+    # Only on main or a manual dispatch, and only when the key secret is present. The behat
     # default key is provided as a masked repository secret — never committed.
-    if: ${{ github.ref == 'refs/heads/master' || github.event_name == 'workflow_dispatch' }}
+    if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch' }}
     needs: build
     steps:
       - uses: actions/checkout@v7
