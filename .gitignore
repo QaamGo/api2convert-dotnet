@@ -13,6 +13,10 @@ coverage/
 *.coverage
 *.cover+*
 
+# CI scratch logs (ci.yml / release.yml tee into the repo root)
+test.log
+audit.log
+
 # IDE
 .vs/
 .idea/
