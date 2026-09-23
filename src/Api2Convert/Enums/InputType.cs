@@ -28,7 +28,7 @@ public enum InputType
     /// <summary>A small file embedded inline as base64.</summary>
     Base64,
 
-    /// <summary>A file imported from cloud storage (S3, GCS, Azure, FTP, ...).</summary>
+    /// <summary>A file imported from cloud storage (S3, GCS, Azure, ...).</summary>
     Cloud,
 }
 

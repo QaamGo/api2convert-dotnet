@@ -122,7 +122,7 @@ on your account yet).
 
 ## Cloud storage
 
-Read an input straight from customer-owned storage (S3, Azure Blob, FTP, Google Cloud), deliver the
+Read an input straight from customer-owned storage (S3, Azure Blob, Google Cloud), deliver the
 converted output into a bucket, or both. Build a cloud **input** with a per-provider factory whose
 arguments carry each provider's required keys verbatim (flat/lowercase, exactly as the API expects) and
 hand it to `ConvertAsync` like any other input:
@@ -162,7 +162,7 @@ var result = await client.ConvertAsync(
     opts: new ConvertOptions { OutputTargets = new[] { target } });
 ```
 
-`Azure`, `Ftp` and `GoogleCloud` input factories exist too (same shape). Credentials ride in the request
+`Azure` and `GoogleCloud` input factories exist too (same shape). Credentials ride in the request
 body, so the SDK masks the whole `credentials` object to `[REDACTED]` in `ToString()` / logs and never
 prints or echoes it in error text.
 

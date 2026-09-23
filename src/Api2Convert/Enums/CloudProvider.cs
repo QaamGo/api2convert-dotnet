@@ -13,7 +13,7 @@ namespace Api2Convert.Enums;
 /// <see cref="CloudProviders.FromWire"/> (returns null on an unknown value), never a throwing parse.</para>
 ///
 /// <para>An import factory (a <see cref="Models.CloudInput"/> named constructor) exists for
-/// <see cref="AmazonS3"/>, <see cref="Azure"/>, <see cref="Ftp"/> and <see cref="GoogleCloud"/>.
+/// <see cref="AmazonS3"/>, <see cref="Azure"/> and <see cref="GoogleCloud"/>.
 /// <see cref="Gdrive"/> and <see cref="Youtube"/> are <strong>output-only</strong> (they validate as an
 /// output <c>type</c> but have no downloader); Google Drive <em>input</em> uses the separate
 /// <c>gdrive_picker</c> input type via the generic <c>AddInputAsync</c> raw-map path.</para>
@@ -25,9 +25,6 @@ public enum CloudProvider
 
     /// <summary>Azure Blob Storage.</summary>
     Azure,
-
-    /// <summary>An FTP server.</summary>
-    Ftp,
 
     /// <summary>Google Drive (output-only).</summary>
     Gdrive,
@@ -46,7 +43,6 @@ public static class CloudProviders
     {
         [CloudProvider.AmazonS3] = "amazons3",
         [CloudProvider.Azure] = "azure",
-        [CloudProvider.Ftp] = "ftp",
         [CloudProvider.Gdrive] = "gdrive",
         [CloudProvider.GoogleCloud] = "googlecloud",
         [CloudProvider.Youtube] = "youtube",

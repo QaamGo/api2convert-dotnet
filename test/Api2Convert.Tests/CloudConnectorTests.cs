@@ -24,9 +24,9 @@ public sealed class CloudConnectorTests : A2CTestBase
 
         CloudInput input = CloudInput.AmazonS3("my-bucket", "in/photo.png", "AKIA_TEST", "SECRET_TEST");
         var target = new OutputTarget(
-            "ftp",
-            new Dictionary<string, object?> { ["host"] = "ftp.example.com", ["file"] = "/out/photo.jpg" },
-            new Dictionary<string, object?> { ["username"] = "u", ["password"] = "p" });
+            "azure",
+            new Dictionary<string, object?> { ["container"] = "out-container", ["file"] = "/out/photo.jpg" },
+            new Dictionary<string, object?> { ["accountname"] = "n", ["accountkey"] = "k" });
 
         await Client().ConvertAsync(input, "jpg", opts: new ConvertOptions { OutputTargets = new[] { target } });
 
@@ -45,9 +45,9 @@ public sealed class CloudConnectorTests : A2CTestBase
         // 3) conversion[0].output_target[0] serializes {type,parameters,credentials} and NO status.
         IReadOnlyDictionary<string, object?> conversion = FirstOf(body["conversion"]);
         IReadOnlyDictionary<string, object?> outputTarget = FirstOf(conversion["output_target"]);
-        Assert.Equal("ftp", outputTarget["type"]);
-        AssertMap(new Dictionary<string, object?> { ["host"] = "ftp.example.com", ["file"] = "/out/photo.jpg" }, outputTarget["parameters"]);
-        AssertMap(new Dictionary<string, object?> { ["username"] = "u", ["password"] = "p" }, outputTarget["credentials"]);
+        Assert.Equal("azure", outputTarget["type"]);
+        AssertMap(new Dictionary<string, object?> { ["container"] = "out-container", ["file"] = "/out/photo.jpg" }, outputTarget["parameters"]);
+        AssertMap(new Dictionary<string, object?> { ["accountname"] = "n", ["accountkey"] = "k" }, outputTarget["credentials"]);
         Assert.False(outputTarget.ContainsKey("status"));
 
         // output targets never leak into the conversion options map.
@@ -71,9 +71,9 @@ public sealed class CloudConnectorTests : A2CTestBase
                     ["output_target"] = new List<object?>
                     {
                         OutputTarget.Of(
-                            CloudProvider.Ftp,
-                            new Dictionary<string, object?> { ["host"] = "ftp.example.com", ["file"] = "/out/photo.jpg" },
-                            new Dictionary<string, object?> { ["username"] = "u", ["password"] = "p" }).ToDescriptor(),
+                            CloudProvider.Azure,
+                            new Dictionary<string, object?> { ["container"] = "out-container", ["file"] = "/out/photo.jpg" },
+                            new Dictionary<string, object?> { ["accountname"] = "n", ["accountkey"] = "k" }).ToDescriptor(),
                     },
                 },
             },
@@ -89,23 +89,23 @@ public sealed class CloudConnectorTests : A2CTestBase
         AssertMap(new Dictionary<string, object?> { ["accesskeyid"] = "AKIA_TEST", ["secretaccesskey"] = "SECRET_TEST" }, inputDescriptor["credentials"]);
 
         IReadOnlyDictionary<string, object?> outputTarget = FirstOf(FirstOf(body["conversion"])["output_target"]);
-        Assert.Equal("ftp", outputTarget["type"]);
+        Assert.Equal("azure", outputTarget["type"]);
         Assert.False(outputTarget.ContainsKey("status"));
-        AssertMap(new Dictionary<string, object?> { ["username"] = "u", ["password"] = "p" }, outputTarget["credentials"]);
+        AssertMap(new Dictionary<string, object?> { ["accountname"] = "n", ["accountkey"] = "k" }, outputTarget["credentials"]);
     }
 
     [Fact]
     public async Task AddInputAcceptsCloudInputDescriptor()
     {
-        Http.AddJson(200, "{\"id\":\"in-1\",\"type\":\"cloud\",\"source\":\"ftp\"}");
+        Http.AddJson(200, "{\"id\":\"in-1\",\"type\":\"cloud\",\"source\":\"azure\"}");
 
-        await Client().Jobs.AddInputAsync("job-1", CloudInput.Ftp("ftp.example.com", "in/a.png", "u", "p").ToDescriptor());
+        await Client().Jobs.AddInputAsync("job-1", CloudInput.Azure("in-container", "in/a.png", "n", "k").ToDescriptor());
 
         IReadOnlyDictionary<string, object?> body = RequestAt(0).BodyJson();
         Assert.Equal("cloud", body["type"]);
-        Assert.Equal("ftp", body["source"]);
-        AssertMap(new Dictionary<string, object?> { ["host"] = "ftp.example.com", ["file"] = "in/a.png" }, body["parameters"]);
-        AssertMap(new Dictionary<string, object?> { ["username"] = "u", ["password"] = "p" }, body["credentials"]);
+        Assert.Equal("azure", body["source"]);
+        AssertMap(new Dictionary<string, object?> { ["container"] = "in-container", ["file"] = "in/a.png" }, body["parameters"]);
+        AssertMap(new Dictionary<string, object?> { ["accountname"] = "n", ["accountkey"] = "k" }, body["credentials"]);
     }
 
     // ---- Fixture 2: read hydration (a GET /jobs/{id} response) -----------------------------------
@@ -117,8 +117,8 @@ public sealed class CloudConnectorTests : A2CTestBase
             "{\"id\":\"job-1\",\"status\":{\"code\":\"completed\"},"
             + "\"input\":[{\"id\":\"in-1\",\"type\":\"cloud\",\"source\":\"amazons3\",\"status\":\"ready\","
             + "\"parameters\":{\"bucket\":\"my-bucket\",\"file\":\"in/photo.png\"},\"credentials\":{}}],"
-            + "\"conversion\":[{\"id\":\"c-1\",\"target\":\"jpg\",\"output_target\":[{\"type\":\"ftp\","
-            + "\"parameters\":{\"host\":\"ftp.example.com\",\"file\":\"/out/photo.jpg\"},"
+            + "\"conversion\":[{\"id\":\"c-1\",\"target\":\"jpg\",\"output_target\":[{\"type\":\"azure\","
+            + "\"parameters\":{\"container\":\"out-container\",\"file\":\"/out/photo.jpg\"},"
             + "\"credentials\":{},\"status\":\"uploading\"}]}]}"));
 
         // 1) input source is a RAW string; parameters surface.
@@ -130,9 +130,9 @@ public sealed class CloudConnectorTests : A2CTestBase
 
         // 2) output target status/parameters/type surface.
         OutputTarget output = job.Conversion[0].OutputTargets[0];
-        Assert.Equal("ftp", output.Type);
+        Assert.Equal("azure", output.Type);
         Assert.Equal("uploading", output.Status);
-        Assert.Equal("ftp.example.com", output.Parameters["host"]);
+        Assert.Equal("out-container", output.Parameters["container"]);
 
         // 3) credentials are never surfaced (the API returns them empty; the SDK does not hydrate).
         Assert.Equal(0, output.Credentials.Count);
@@ -160,12 +160,14 @@ public sealed class CloudConnectorTests : A2CTestBase
     {
         Assert.Equal("amazons3", CloudProvider.AmazonS3.Wire());
         Assert.Equal("azure", CloudProvider.Azure.Wire());
-        Assert.Equal("ftp", CloudProvider.Ftp.Wire());
         Assert.Equal("gdrive", CloudProvider.Gdrive.Wire());
         Assert.Equal("googlecloud", CloudProvider.GoogleCloud.Wire());
         Assert.Equal("youtube", CloudProvider.Youtube.Wire());
         // Tolerant resolution never throws on an unknown provider.
         Assert.Null(CloudProviders.FromWire("r2"));
+        // `ftp` is retired vocabulary the API still returns on historical jobs; it resolves to null
+        // like any other unknown provider rather than throwing.
+        Assert.Null(CloudProviders.FromWire("ftp"));
     }
 
     [Fact]
@@ -203,13 +205,13 @@ public sealed class CloudConnectorTests : A2CTestBase
     public void OutputTargetOmitsStatusOnSerializeButHydratesItOnRead()
     {
         var created = new OutputTarget(
-            "ftp",
-            new Dictionary<string, object?> { ["host"] = "h" },
-            new Dictionary<string, object?> { ["username"] = "u" },
+            "azure",
+            new Dictionary<string, object?> { ["container"] = "c" },
+            new Dictionary<string, object?> { ["accountkey"] = "k" },
             status: "completed");
         Assert.False(created.ToDescriptor().ContainsKey("status"));
 
-        OutputTarget read = OutputTarget.FromDict(Parse("{\"type\":\"ftp\",\"parameters\":{\"host\":\"h\"},\"status\":\"completed\"}"));
+        OutputTarget read = OutputTarget.FromDict(Parse("{\"type\":\"azure\",\"parameters\":{\"container\":\"c\"},\"status\":\"completed\"}"));
         Assert.Equal("completed", read.Status);
         Assert.Equal(0, read.Credentials.Count);
     }

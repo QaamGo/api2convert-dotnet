@@ -7,7 +7,7 @@ namespace Api2Convert.Models;
 
 /// <summary>
 /// A cloud-storage input descriptor — imports a file the API fetches from customer-owned storage
-/// (S3, Azure Blob, FTP, Google Cloud Storage): <c>{ type:"cloud", source:&lt;provider&gt;, parameters,
+/// (S3, Azure Blob, Google Cloud Storage): <c>{ type:"cloud", source:&lt;provider&gt;, parameters,
 /// credentials }</c>.
 ///
 /// <para>Hand it to <c>client.ConvertAsync(cloudInput, ...)</c> / <c>StartConversionAsync(...)</c> as the
@@ -45,7 +45,7 @@ public sealed record CloudInput
         Credentials = new CloudCredentials(credentials);
     }
 
-    /// <summary>The provider, as a raw wire string (<c>amazons3</c>, <c>ftp</c>, ...).</summary>
+    /// <summary>The provider, as a raw wire string (<c>amazons3</c>, <c>azure</c>, ...).</summary>
     public string Source { get; init; }
 
     /// <summary>Non-secret locator keys (<c>bucket</c>, <c>file</c>, <c>host</c>, ...).</summary>
@@ -93,19 +93,6 @@ public sealed record CloudInput
             CloudProvider.Azure.Wire(),
             Merge(new() { ["container"] = container, ["file"] = file }, parameters),
             Merge(new() { ["accountname"] = accountname, ["accountkey"] = accountkey }, credentials));
-
-    /// <summary>Import from an FTP server.</summary>
-    public static CloudInput Ftp(
-        string host,
-        string file,
-        string username,
-        string password,
-        IReadOnlyDictionary<string, object?>? parameters = null,
-        IReadOnlyDictionary<string, object?>? credentials = null) =>
-        new(
-            CloudProvider.Ftp.Wire(),
-            Merge(new() { ["host"] = host, ["file"] = file }, parameters),
-            Merge(new() { ["username"] = username, ["password"] = password }, credentials));
 
     /// <summary>Import from Google Cloud Storage.</summary>
     public static CloudInput GoogleCloud(

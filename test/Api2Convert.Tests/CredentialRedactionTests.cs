@@ -36,8 +36,8 @@ public sealed class CredentialRedactionTests : A2CTestBase
     public void OutputTargetToStringMasksCredentials()
     {
         string rendered = OutputTarget.Of(
-            CloudProvider.Ftp,
-            new Dictionary<string, object?> { ["host"] = "ftp.example.com" },
+            CloudProvider.Azure,
+            new Dictionary<string, object?> { ["container"] = "out-container" },
             new Dictionary<string, object?> { ["username"] = "u", ["password"] = Secret }).ToString();
 
         Assert.DoesNotContain(Secret, rendered);
