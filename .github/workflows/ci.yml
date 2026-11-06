@@ -4,6 +4,10 @@ on:
   push:
     branches: [master, main]
   pull_request:
+  # Weekly, so a new advisory turns the audit red without a push. GitHub switches scheduled runs off
+  # after 60 days without a commit in a public repository.
+  schedule:
+    - cron: '37 5 * * 1'
 
 permissions:
   contents: read
@@ -94,7 +98,7 @@ jobs:
     runs-on: ubuntu-latest
     # Only on main or a manual dispatch, and only when the key secret is present. The behat
     # default key is provided as a masked repository secret — never committed.
-    if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch' }}
+    if: ${{ github.event_name != 'schedule' && (github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch') }}
     needs: build
     steps:
       - uses: actions/checkout@v7
