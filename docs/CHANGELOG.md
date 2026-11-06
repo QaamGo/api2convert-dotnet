@@ -3,6 +3,12 @@
 All notable changes to this package are documented here. This project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [10.4.1] - 2026-11-06
+
+- Removed the FTP cloud provider, because FTP is being retired from the API: `CloudInput.Ftp()` and
+  `CloudProvider.Ftp`. Code that uses them no longer compiles and needs another provider.
+  Reading stays tolerant: jobs created with `ftp` earlier still load.
+
 ## [10.4.0] - 2026-09-11
 
 - The package now multi-targets `net8.0` and `net10.0`. Until now only a `net8.0` assembly was
